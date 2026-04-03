@@ -594,7 +594,8 @@ function render(){
 function renderDashboard(){
   var today=getTodayDay(),viewDay=selectedDay,stats=getStats(),totalDone=0;
   for(var i=0;i<stats.length;i++)totalDone+=stats[i].completed;
-  var cDay=getTodayChallengeDay(),totalPossible=stats.length*cDay,overallPct=totalPossible>0?Math.round(totalDone/totalPossible*100):0;
+  var pastDays=stats.length>0?stats[0].pastDays:1;
+  var totalPossible=stats.length*pastDays,overallPct=totalPossible>0?Math.round(totalDone/totalPossible*100):0;
   var todayStatus=[];
   for(var i=0;i<data.members.length;i++){
     var m=data.members[i],rec=getRec(m,viewDay),posts=countAll(rec,m,viewDay),hasMain=rec.mainLink.trim()!=='';
@@ -644,14 +645,18 @@ function renderDashboard(){
     h+='<div class="rank-row"><div class="rank-medal '+mc+'">'+r+'</div>';
     h+='<span class="rank-name">'+(MEMBER_THREADS[s.name]?'<a href="'+MEMBER_THREADS[s.name]+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none" title="Threads 프로필">'+esc(s.name)+'</a>':esc(s.name))+'</span>';
     h+='<div class="rank-bar-bg"><div class="rank-bar" style="width:'+s.rate+'%"></div><span class="rank-pct">'+s.rate+'%</span></div>';
-    h+='<span class="rank-days">'+s.completed+'/'+getChallengeTotalDays()+'</span></div>';
+    h+='<span class="rank-days">'+s.completed+'/'+s.pastDays+'</span></div>';
   }
   h+='</div>';
   document.getElementById('panel-dashboard').innerHTML=h;
 }
 function sCard(label,value,cls){return '<div class="summary-card '+cls+'"><div class="label">'+label+'</div><div class="value">'+value+'</div><div class="bar"></div></div>'}
 function getStats(){
-  var totalD=getChallengeTotalDays();var s=[];for(var i=0;i<data.members.length;i++){var m=data.members[i],c=0;for(var d=START_DAY;d<=DAYS;d++)if(isComplete(getRec(m,d),m,d))c++;s.push({name:m,completed:c,rate:Math.round(c/totalD*100)})}return s;
+  // 어제까지 지난 일수 기준 (오늘은 아직 진행 중이니 제외)
+  var today=getTodayDay();
+  var pastDays=today-START_DAY; // 어제까지 완료된 일수
+  if(pastDays<1)pastDays=1;
+  var s=[];for(var i=0;i<data.members.length;i++){var m=data.members[i],c=0;for(var d=START_DAY;d<today;d++)if(isComplete(getRec(m,d),m,d))c++;s.push({name:m,completed:c,pastDays:pastDays,rate:Math.round(c/pastDays*100)})}return s;
 }
 
 function renderCalendar(){
