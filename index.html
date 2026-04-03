@@ -159,6 +159,15 @@ body {
 }
 @keyframes sirenBlink { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
+/* ===== CONGRATS ===== */
+.congrats-item { border-color:rgba(90,158,111,0.3) !important; background:linear-gradient(135deg,#fff 60%,#eef6f0) !important; }
+.congrats-tag {
+  font-size:10px; padding:3px 10px; border-radius:20px; font-weight:700;
+  background:var(--success); color:#fff; letter-spacing:-0.2px;
+}
+.congrats-icon { display:inline-block; font-size:16px; margin-right:4px; animation:congratsPop 1s ease infinite; }
+@keyframes congratsPop { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+
 /* ===== RANKINGS ===== */
 .rank-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
 .rank-medal {
@@ -611,11 +620,13 @@ function renderDashboard(){
   for(var i=0;i<todayStatus.length;i++){
     var s=todayStatus[i],dc=s.complete?'dot-green':s.posts>0?'dot-yellow':'dot-red';
     var showSiren=isSirenTime&&!s.complete;
-    h+='<div class="today-item'+(s.complete?' complete':'')+(showSiren?' siren-item':'')+'">';
-    if(showSiren)h+='<span class="siren">&#x1f6a8;</span>';
+    h+='<div class="today-item'+(s.complete?' complete congrats-item':'')+(showSiren?' siren-item':'')+'">';
+    if(s.complete)h+='<span class="congrats-icon">&#x1f389;</span>';
+    else if(showSiren)h+='<span class="siren">&#x1f6a8;</span>';
     else h+='<div class="dot '+dc+'"></div>';
     h+='<span class="today-name">'+esc(s.name)+(MEMBER_THREADS[s.name]?' <a href="'+MEMBER_THREADS[s.name]+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary);text-decoration:none;font-weight:500">@</a>':'')+'</span><span class="today-info">'+s.posts+'/3</span>';
-    if(showSiren)h+='<span class="siren-tag">미인증!</span>';
+    if(s.complete)h+='<span class="congrats-tag">&#x1f38a; 인증완료!</span>';
+    else if(showSiren)h+='<span class="siren-tag">미인증!</span>';
     else h+='<span class="badge '+(s.hasMain?'badge-on':'badge-off')+'">'+(s.hasMain?'대표글 ✓':'대표글 ✗')+'</span>';
     h+='</div>';
   }
