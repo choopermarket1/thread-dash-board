@@ -674,7 +674,7 @@ function renderRecord(){
   h+='</div>';
   var locked=isTodayLocked();
   if(locked){
-    h+='<div class="locked-banner"><span class="lock-icon">&#x1f512;</span><div><div class="lock-text">오늘의 인증이 마감되었습니다</div><div class="lock-sub">밤 10시 이후에는 당일 인증을 수정할 수 없습니다 (한국시간 기준)</div></div></div>';
+    h+='<div class="locked-banner"><span class="lock-icon">&#x1f512;</span><div><div class="lock-text">'+MONTH+'월 '+selectedDay+'일 인증 마감</div><div class="lock-sub">입력은 마감되었지만 기록은 볼 수 있습니다</div></div></div>';
   }
   for(var i=0;i<data.members.length;i++){
     var m=data.members[i],rec=getRec(m,selectedDay),posts=countAll(rec,m,selectedDay),done=isComplete(rec,m,selectedDay);
@@ -687,16 +687,23 @@ function renderRecord(){
     h+='<div class="post-section">';
     for(var p=0;p<3;p++){
       var ik=imgKey(m,selectedDay,p),hasImg=!!imgData[ik];
-      h+='<div class="img-zone'+(hasImg?' has-img':'')+(locked?' locked':'')+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" data-post="'+p+'">';
-      h+='<span class="img-num">인증 '+(p+1)+'</span>';
-      if(hasImg){h+='<img class="img-preview" src="'+imgData[ik]+'" onclick="openLightbox(\''+escAttr(ik)+'\')" />';if(!locked)h+='<button class="img-remove" onclick="event.stopPropagation();removeImg(\''+escAttr(ik)+'\')">&times;</button>';}
-      else if(locked){h+='<div class="img-zone-icon">&#x1f512;</div><div class="img-zone-label">마감</div>'}
-      else{h+='<div class="img-zone-icon">&#x1f4f7;</div><div class="img-zone-label"><strong>클릭</strong> · <strong>붙여넣기</strong> · <strong>드래그</strong></div>'}
-      h+='</div>';
+      if(locked){
+        h+='<div class="img-zone'+(hasImg?' has-img':'')+'" style="cursor:default;border-style:solid">';
+        h+='<span class="img-num">인증 '+(p+1)+'</span>';
+        if(hasImg){h+='<img class="img-preview" src="'+imgData[ik]+'" onclick="openLightbox(\''+escAttr(ik)+'\')" />';}
+        else{h+='<div class="img-zone-icon" style="opacity:0.15">—</div><div class="img-zone-label">미등록</div>'}
+        h+='</div>';
+      } else {
+        h+='<div class="img-zone'+(hasImg?' has-img':'')+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" data-post="'+p+'">';
+        h+='<span class="img-num">인증 '+(p+1)+'</span>';
+        if(hasImg){h+='<img class="img-preview" src="'+imgData[ik]+'" onclick="openLightbox(\''+escAttr(ik)+'\')" />';h+='<button class="img-remove" onclick="event.stopPropagation();removeImg(\''+escAttr(ik)+'\')">&times;</button>';}
+        else{h+='<div class="img-zone-icon">&#x1f4f7;</div><div class="img-zone-label"><strong>클릭</strong> · <strong>붙여넣기</strong> · <strong>드래그</strong></div>'}
+        h+='</div>';
+      }
     }
     h+='</div><div class="main-row"><span class="main-label">&#x1f517; 대표글</span>';
     if(locked){
-      h+='<input class="main-input locked" type="text" value="'+escAttr(rec.mainLink||'(마감됨)')+'" disabled />';
+      h+='<input class="main-input" type="text" value="'+escAttr(rec.mainLink||'')+'" disabled style="opacity:0.7" />';
     } else {
       h+='<input class="main-input" type="text" placeholder="대표글 링크를 입력하세요" value="'+escAttr(rec.mainLink)+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" oninput="onMainChange(this)" />';
     }
