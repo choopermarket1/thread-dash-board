@@ -280,12 +280,11 @@ body {
 .img-preview { max-width:100%; max-height:200px; border-radius:8px; object-fit:contain; cursor:pointer; transition:opacity 0.2s; }
 .img-preview:hover { opacity:0.85; }
 .img-remove {
-  position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%;
-  background:var(--danger); color:#fff; border:none; cursor:pointer;
-  font-size:13px; display:flex; align-items:center; justify-content:center;
-  opacity:0; transition:opacity 0.2s;
+  position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%;
+  background:var(--danger); color:#fff; border:2px solid #fff; cursor:pointer;
+  font-size:14px; display:flex; align-items:center; justify-content:center;
+  z-index:5; box-shadow:0 2px 6px rgba(0,0,0,0.3);
 }
-.img-zone:hover .img-remove { opacity:1; }
 .img-num {
   position:absolute; top:6px; left:6px; background:var(--text);
   color:#fff; font-size:9px; font-weight:700; padding:3px 8px; border-radius:6px;
@@ -682,7 +681,7 @@ function renderRecord(){
       var ik=imgKey(m,selectedDay,p),hasImg=!!imgData[ik];
       h+='<div class="img-zone'+(hasImg?' has-img':'')+(locked?' locked':'')+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" data-post="'+p+'">';
       h+='<span class="img-num">인증 '+(p+1)+'</span>';
-      if(hasImg){h+='<img class="img-preview" src="'+imgData[ik]+'" onclick="openLightbox(\''+escAttr(ik)+'\')" />';}
+      if(hasImg){h+='<img class="img-preview" src="'+imgData[ik]+'" onclick="openLightbox(\''+escAttr(ik)+'\')" />';if(!locked)h+='<button class="img-remove" onclick="event.stopPropagation();removeImg(\''+escAttr(ik)+'\')">&times;</button>';}
       else if(locked){h+='<div class="img-zone-icon">&#x1f512;</div><div class="img-zone-label">마감</div>'}
       else{h+='<div class="img-zone-icon">&#x1f4f7;</div><div class="img-zone-label"><strong>클릭</strong> · <strong>붙여넣기</strong> · <strong>드래그</strong></div>'}
       h+='</div>';
