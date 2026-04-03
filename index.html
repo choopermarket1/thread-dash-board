@@ -597,8 +597,10 @@ function renderDashboard(){
   h+=sCard('총 멤버',data.members.length+'명','sc-4');
   h+='</div>';
   h+='<div class="card"><div class="card-title"><span class="icon">&#x1f4cc;</span>오늘의 현황 &middot; '+MONTH+'월 '+today+'일</div><div class="today-grid">';
-  var nowHour=new Date().getHours();
-  var isSirenTime=(nowHour>=22&&nowHour<=23);
+  var kstNow=getKSTDate();
+  var nowHour=kstNow.getHours(),nowDay=kstNow.getDate();
+  // 4월 4일까지는 사이렌 꺼둠
+  var isSirenTime=(nowHour>=22&&nowHour<=23&&!(kstNow.getFullYear()===YEAR&&kstNow.getMonth()+1===MONTH&&nowDay<=4));
   for(var i=0;i<todayStatus.length;i++){
     var s=todayStatus[i],dc=s.complete?'dot-green':s.posts>0?'dot-yellow':'dot-red';
     var showSiren=isSirenTime&&!s.complete;
