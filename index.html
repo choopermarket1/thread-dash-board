@@ -426,10 +426,41 @@ var MAX_IMG_W=400,IMG_QUALITY=0.55;
 
 var data=loadData(),imgData=loadImgData(),selectedDay=getTodayDay(),currentTab='dashboard';
 
-// 기본 멤버 동기화: 코드에 없는 멤버 제거 + 새 멤버 추가
+// 이전 멤버명 → 새 멤버명 마이그레이션
+(function migrateMembers(){
+  var renames={
+    '김혜경becoming_hyekyung':'김혜경',
+    '퓨쳐마인드_이광희':'이광희'
+  };
+  var changed=false;
+  // records 키 마이그레이션
+  Object.keys(renames).forEach(function(oldName){
+    var newName=renames[oldName];
+    Object.keys(data.records).forEach(function(k){
+      if(k.indexOf(oldName+'_')===0){
+        var newKey=k.replace(oldName+'_',newName+'_');
+        if(!data.records[newKey]){data.records[newKey]=data.records[k]}
+        delete data.records[k]; changed=true;
+      }
+    });
+    Object.keys(imgData).forEach(function(k){
+      if(k.indexOf(oldName+'_')===0){
+        var newKey=k.replace(oldName+'_',newName+'_');
+        if(!imgData[newKey]){imgData[newKey]=imgData[k]}
+        delete imgData[k]; changed=true;
+      }
+    });
+    // 멤버 목록에서도 교체
+    var idx=data.members.indexOf(oldName);
+    if(idx!==-1){data.members[idx]=newName;changed=true}
+  });
+  if(changed){save();saveImgs()}
+})();
+
+// 기본 멤버 동기화
 (function syncMembers(){
   var changed=false;
-  // 삭제된 멤버 제거
+  // 한석준 등 제거 대상만 삭제 (DEFAULT에 없는 멤버)
   var old=data.members.slice();
   data.members=data.members.filter(function(m){return DEFAULT_MEMBERS.indexOf(m)!==-1});
   if(data.members.length!==old.length)changed=true;
@@ -437,6 +468,8 @@ var data=loadData(),imgData=loadImgData(),selectedDay=getTodayDay(),currentTab='
   for(var i=0;i<DEFAULT_MEMBERS.length;i++){
     if(data.members.indexOf(DEFAULT_MEMBERS[i])===-1){data.members.push(DEFAULT_MEMBERS[i]);changed=true}
   }
+  // 순서도 DEFAULT_MEMBERS 기준으로 정렬
+  data.members.sort(function(a,b){return DEFAULT_MEMBERS.indexOf(a)-DEFAULT_MEMBERS.indexOf(b)});
   if(changed)save();
 })();
 
