@@ -583,13 +583,13 @@ function render(){
 }
 
 function renderDashboard(){
-  var today=getTodayDay(),stats=getStats(),totalDone=0;
+  var today=getTodayDay(),viewDay=selectedDay,stats=getStats(),totalDone=0;
   for(var i=0;i<stats.length;i++)totalDone+=stats[i].completed;
   var cDay=getTodayChallengeDay(),totalPossible=stats.length*cDay,overallPct=totalPossible>0?Math.round(totalDone/totalPossible*100):0;
   var todayStatus=[];
   for(var i=0;i<data.members.length;i++){
-    var m=data.members[i],rec=getRec(m,today),posts=countAll(rec,m,today),hasMain=rec.mainLink.trim()!=='';
-    todayStatus.push({name:m,complete:isComplete(rec,m,today),posts:posts,hasMain:hasMain});
+    var m=data.members[i],rec=getRec(m,viewDay),posts=countAll(rec,m,viewDay),hasMain=rec.mainLink.trim()!=='';
+    todayStatus.push({name:m,complete:isComplete(rec,m,viewDay),posts:posts,hasMain:hasMain});
   }
   var todayDone=todayStatus.filter(function(s){return s.complete}).length;
   var h='<div class="summary-grid">';
@@ -598,7 +598,13 @@ function renderDashboard(){
   h+=sCard('챌린지 일차',cDay+'일째','sc-3');
   h+=sCard('총 멤버',data.members.length+'명','sc-4');
   h+='</div>';
-  h+='<div class="card"><div class="card-title"><span class="icon">&#x1f4cc;</span>오늘의 현황 &middot; '+MONTH+'월 '+today+'일</div><div class="today-grid">';
+  var isToday=(viewDay===today);
+  h+='<div class="card"><div class="card-title" style="justify-content:space-between">';
+  h+='<span style="display:flex;align-items:center;gap:10px"><span class="icon">&#x1f4cc;</span>'+MONTH+'월 '+viewDay+'일 현황'+(isToday?' (오늘)':'')+'</span>';
+  h+='<span style="display:flex;gap:6px">';
+  h+='<button onclick="selectedDay=Math.max(START_DAY,selectedDay-1);render()" style="border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:4px 12px;cursor:pointer;font-size:13px">&#x25c0;</button>';
+  h+='<button onclick="selectedDay=Math.min(DAYS,selectedDay+1);render()" style="border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:4px 12px;cursor:pointer;font-size:13px">&#x25b6;</button>';
+  h+='</span></div><div class="today-grid">';
   var kstNow=getKSTDate();
   var nowHour=kstNow.getHours(),nowDay=kstNow.getDate();
   // 4월 4일까지는 사이렌 꺼둠
@@ -652,7 +658,7 @@ function renderCalendar(){
   h+='</div></div>';
   document.getElementById('panel-calendar').innerHTML=h;
 }
-function selectDayFromCal(d){selectedDay=d;switchTab('record')}
+function selectDayFromCal(d){selectedDay=d;switchTab('dashboard')}
 
 function renderRecord(){
   var h='<div class="card"><div class="day-nav"><button onclick="changeDay(-1)">&#x25c0;</button>';
