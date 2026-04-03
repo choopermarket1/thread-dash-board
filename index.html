@@ -379,7 +379,19 @@ body {
 var YEAR=2025,MONTH=4,DAYS=30;
 var STORAGE_KEY='threads-challenge-2025-04';
 var IMG_KEY='threads-challenge-imgs-2025-04';
-var DEFAULT_MEMBERS=['김혜경','BELLA EDIT','김성훈','추세은','이광희','강국어','김은전','벨라','세은','성훈'];
+var DEFAULT_MEMBERS=['강국어','김성훈','김은전','한석준','최덕분','추세은','퓨쳐마인드_이광희','BELLA EDIT','silver rain','김혜경becoming_hyekyung'];
+var MEMBER_THREADS={
+  '강국어':'https://www.threads.net/@kang_moonhak',
+  '김성훈':'https://www.threads.net/@for_p_lab',
+  '김은전':'https://www.threads.net/@ej_kim_78',
+  '한석준':'https://www.threads.net/@shift.society_official',
+  '최덕분':'https://www.threads.net/@gody_coach',
+  '추세은':'https://www.threads.net/@infpadhdboss38',
+  '퓨쳐마인드_이광희':'https://www.threads.net/@future_mind.lounge',
+  'BELLA EDIT':'https://www.threads.net/@bellaedit_kr',
+  'silver rain':'https://www.threads.net/@designer_eunbee',
+  '김혜경becoming_hyekyung':'https://www.threads.net/@becoming_hyekyung'
+};
 var MAX_IMG_W=400,IMG_QUALITY=0.55;
 
 var data=loadData(),imgData=loadImgData(),selectedDay=getTodayDay(),currentTab='dashboard';
@@ -441,7 +453,7 @@ function renderDashboard(){
   for(var i=0;i<todayStatus.length;i++){
     var s=todayStatus[i],dc=s.complete?'dot-green':s.posts>0?'dot-yellow':'dot-red';
     h+='<div class="today-item'+(s.complete?' complete':'')+'"><div class="dot '+dc+'"></div>';
-    h+='<span class="today-name">'+esc(s.name)+'</span><span class="today-info">'+s.posts+'/3</span>';
+    h+='<span class="today-name">'+esc(s.name)+(MEMBER_THREADS[s.name]?' <a href="'+MEMBER_THREADS[s.name]+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary);text-decoration:none;font-weight:500">@</a>':'')+'</span><span class="today-info">'+s.posts+'/3</span>';
     h+='<span class="badge '+(s.hasMain?'badge-on':'badge-off')+'">'+(s.hasMain?'대표글 ✓':'대표글 ✗')+'</span></div>';
   }
   h+='</div></div>';
@@ -450,7 +462,7 @@ function renderDashboard(){
   for(var i=0;i<stats.length;i++){
     var s=stats[i],mc=i<1?'rm-1':i<2?'rm-2':i<3?'rm-3':'rm-n';
     h+='<div class="rank-row"><div class="rank-medal '+mc+'">'+(i+1)+'</div>';
-    h+='<span class="rank-name">'+esc(s.name)+'</span>';
+    h+='<span class="rank-name">'+(MEMBER_THREADS[s.name]?'<a href="'+MEMBER_THREADS[s.name]+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none" title="Threads 프로필">'+esc(s.name)+'</a>':esc(s.name))+'</span>';
     h+='<div class="rank-bar-bg"><div class="rank-bar" style="width:'+s.rate+'%"></div><span class="rank-pct">'+s.rate+'%</span></div>';
     h+='<span class="rank-days">'+s.completed+'/'+DAYS+'</span></div>';
   }
@@ -501,7 +513,7 @@ function renderRecord(){
     var badgeCls=done?'rb-done':posts>0?'rb-partial':'rb-none';
     h+='<div class="rec-card '+cardCls+'"><div class="rec-header">';
     h+='<div class="rec-badge '+badgeCls+'">'+(done?'✓':posts)+'</div>';
-    h+='<span class="rec-name">'+esc(m)+'</span>';
+    h+='<span class="rec-name">'+esc(m)+(MEMBER_THREADS[m]?' <a href="'+MEMBER_THREADS[m]+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary);text-decoration:none;font-weight:500">@</a>':'')+'</span>';
     h+='<span class="rec-status '+(done?'rs-done':'rs-not')+'">'+(done?'완료':'인증 '+posts+'/3')+'</span></div>';
     h+='<div class="post-section">';
     for(var p=0;p<3;p++){
@@ -560,7 +572,7 @@ function renderMembers(){
   var h='<div class="card"><div class="card-title"><span class="icon">&#x1f465;</span>멤버 관리</div>';
   h+='<div class="add-row"><input class="add-input" type="text" id="newMemberInput" placeholder="새 멤버 이름" onkeydown="if(event.key===\'Enter\')addMember()" />';
   h+='<button class="btn-add" onclick="addMember()">+ 추가</button></div>';
-  for(var i=0;i<data.members.length;i++){h+='<div class="member-item"><div class="member-num">'+(i+1)+'</div><span class="member-name">'+esc(data.members[i])+'</span><button class="btn-del" onclick="removeMember(\''+escAttr(data.members[i])+'\')">삭제</button></div>'}
+  for(var i=0;i<data.members.length;i++){var mn=data.members[i],tl=MEMBER_THREADS[mn];h+='<div class="member-item"><div class="member-num">'+(i+1)+'</div><span class="member-name">'+esc(mn)+(tl?' <a href="'+tl+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary);text-decoration:none;font-weight:500">&#x1f9f5; Threads</a>':'')+'</span><button class="btn-del" onclick="removeMember(\''+escAttr(mn)+'\')">삭제</button></div>'}
   h+='<p style="font-size:12px;color:var(--text-muted);margin-top:14px;font-weight:500">'+data.members.length+'명 참여 중</p></div>';
   var used=getStorageUsage(),maxB=5*1024*1024,pct=Math.min(100,Math.round(used/maxB*100));
   h+='<div class="card"><div class="card-title"><span class="icon">&#x2699;&#xfe0f;</span>데이터 관리</div>';
