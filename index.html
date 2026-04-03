@@ -143,6 +143,17 @@ body {
 .badge-on { background:var(--text); color:#fff; }
 .badge-off { background:rgba(0,0,0,0.05); color:var(--text-muted); }
 
+/* ===== SIREN ALERT ===== */
+.siren-item { border-color:var(--danger) !important; background:linear-gradient(135deg,#fff 60%,#fde8e8) !important; }
+.siren { display:inline-block; font-size:18px; margin-right:6px; animation:sirenPulse 0.8s ease-in-out infinite alternate; }
+@keyframes sirenPulse { from{transform:scale(1);opacity:0.7} to{transform:scale(1.25);opacity:1} }
+.siren-tag {
+  font-size:10px; padding:3px 10px; border-radius:20px; font-weight:700;
+  background:var(--danger); color:#fff; letter-spacing:-0.2px;
+  animation:sirenBlink 1.2s ease-in-out infinite;
+}
+@keyframes sirenBlink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
 /* ===== RANKINGS ===== */
 .rank-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
 .rank-medal {
@@ -450,11 +461,18 @@ function renderDashboard(){
   h+=sCard('총 멤버',data.members.length+'명','sc-4');
   h+='</div>';
   h+='<div class="card"><div class="card-title"><span class="icon">&#x1f4cc;</span>오늘의 현황 &middot; '+MONTH+'월 '+today+'일</div><div class="today-grid">';
+  var nowHour=new Date().getHours();
+  var isSirenTime=(nowHour>=22&&nowHour<=23);
   for(var i=0;i<todayStatus.length;i++){
     var s=todayStatus[i],dc=s.complete?'dot-green':s.posts>0?'dot-yellow':'dot-red';
-    h+='<div class="today-item'+(s.complete?' complete':'')+'"><div class="dot '+dc+'"></div>';
+    var showSiren=isSirenTime&&!s.complete;
+    h+='<div class="today-item'+(s.complete?' complete':'')+(showSiren?' siren-item':'')+'">';
+    if(showSiren)h+='<span class="siren">&#x1f6a8;</span>';
+    else h+='<div class="dot '+dc+'"></div>';
     h+='<span class="today-name">'+esc(s.name)+(MEMBER_THREADS[s.name]?' <a href="'+MEMBER_THREADS[s.name]+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary);text-decoration:none;font-weight:500">@</a>':'')+'</span><span class="today-info">'+s.posts+'/3</span>';
-    h+='<span class="badge '+(s.hasMain?'badge-on':'badge-off')+'">'+(s.hasMain?'대표글 ✓':'대표글 ✗')+'</span></div>';
+    if(showSiren)h+='<span class="siren-tag">미인증!</span>';
+    else h+='<span class="badge '+(s.hasMain?'badge-on':'badge-off')+'">'+(s.hasMain?'대표글 ✓':'대표글 ✗')+'</span>';
+    h+='</div>';
   }
   h+='</div></div>';
   stats.sort(function(a,b){return b.rate-a.rate});
