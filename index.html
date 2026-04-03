@@ -253,6 +253,23 @@ body {
 .img-zone-label { font-size:11px; color:var(--text-muted); font-weight:500; pointer-events:none; line-height:1.6; }
 .img-zone-label strong { color:var(--primary-deep); }
 .img-zone-icon { font-size:26px; margin-bottom:6px; opacity:0.3; pointer-events:none; }
+
+/* ===== LOCKED STATE ===== */
+.locked-banner {
+  background:linear-gradient(135deg,#2c2418,#3d2e1f); color:#fff; border-radius:var(--radius);
+  padding:18px 24px; margin-bottom:16px; display:flex; align-items:center; gap:14px;
+  box-shadow:var(--shadow-md);
+}
+.locked-banner .lock-icon { font-size:28px; }
+.locked-banner .lock-text { font-size:14px; font-weight:600; }
+.locked-banner .lock-sub { font-size:11px; color:rgba(255,255,255,0.5); margin-top:2px; font-weight:400; }
+.img-zone.locked {
+  border-color:rgba(0,0,0,0.08) !important; background:#f0ede9 !important;
+  cursor:not-allowed !important; opacity:0.5; pointer-events:none;
+}
+.main-input.locked {
+  background:#f0ede9 !important; cursor:not-allowed !important; opacity:0.5; pointer-events:none;
+}
 .img-preview { max-width:100%; max-height:200px; border-radius:8px; object-fit:contain; cursor:pointer; transition:opacity 0.2s; }
 .img-preview:hover { opacity:0.85; }
 .img-remove {
@@ -437,6 +454,24 @@ function isComplete(rec,m,d){return countAll(rec,m,d)>=3&&rec.mainLink.trim()!==
 function getTodayDay(){var n=new Date();if(n.getFullYear()===YEAR&&n.getMonth()+1===MONTH)return n.getDate();return 1}
 function getStorageUsage(){var t=0;for(var k in localStorage)if(localStorage.hasOwnProperty(k))t+=localStorage[k].length*2;return t}
 
+// 한국시간(KST=UTC+9) 기준 잠금 체크
+function getKSTHour(){
+  var now=new Date();
+  var utc=now.getTime()+now.getTimezoneOffset()*60000;
+  var kst=new Date(utc+9*3600000);
+  return kst.getHours();
+}
+function getKSTDay(){
+  var now=new Date();
+  var utc=now.getTime()+now.getTimezoneOffset()*60000;
+  var kst=new Date(utc+9*3600000);
+  if(kst.getFullYear()===YEAR&&kst.getMonth()+1===MONTH)return kst.getDate();
+  return -1;
+}
+function isTodayLocked(){
+  return getKSTHour()>=22 && selectedDay===getKSTDay();
+}
+
 function compressImage(file,cb){
   var reader=new FileReader();
   reader.onload=function(e){var img=new Image();img.onload=function(){var c=document.createElement('canvas'),s=Math.min(1,MAX_IMG_W/img.width);c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',IMG_QUALITY))};img.src=e.target.result};
@@ -539,6 +574,10 @@ function renderRecord(){
     h+='<button class="'+cls+'" onclick="jumpDay('+d+')">'+d+'</button>';
   }
   h+='</div>';
+  var locked=isTodayLocked();
+  if(locked){
+    h+='<div class="locked-banner"><span class="lock-icon">&#x1f512;</span><div><div class="lock-text">오늘의 인증이 마감되었습니다</div><div class="lock-sub">밤 10시 이후에는 당일 인증을 수정할 수 없습니다 (한국시간 기준)</div></div></div>';
+  }
   for(var i=0;i<data.members.length;i++){
     var m=data.members[i],rec=getRec(m,selectedDay),posts=countAll(rec,m,selectedDay),done=isComplete(rec,m,selectedDay);
     var cardCls=done?'rc-done':posts>0?'rc-partial':'';
@@ -550,14 +589,19 @@ function renderRecord(){
     h+='<div class="post-section">';
     for(var p=0;p<3;p++){
       var ik=imgKey(m,selectedDay,p),hasImg=!!imgData[ik];
-      h+='<div class="img-zone'+(hasImg?' has-img':'')+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" data-post="'+p+'">';
+      h+='<div class="img-zone'+(hasImg?' has-img':'')+(locked?' locked':'')+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" data-post="'+p+'">';
       h+='<span class="img-num">인증 '+(p+1)+'</span>';
-      if(hasImg){h+='<img class="img-preview" src="'+imgData[ik]+'" onclick="openLightbox(\''+escAttr(ik)+'\')" />';h+='<button class="img-remove" onclick="event.stopPropagation();removeImg(\''+escAttr(ik)+'\')">&times;</button>'}
+      if(hasImg){h+='<img class="img-preview" src="'+imgData[ik]+'" onclick="openLightbox(\''+escAttr(ik)+'\')" />';}
+      else if(locked){h+='<div class="img-zone-icon">&#x1f512;</div><div class="img-zone-label">마감</div>'}
       else{h+='<div class="img-zone-icon">&#x1f4f7;</div><div class="img-zone-label"><strong>클릭</strong> · <strong>붙여넣기</strong> · <strong>드래그</strong></div>'}
       h+='</div>';
     }
     h+='</div><div class="main-row"><span class="main-label">&#x1f517; 대표글</span>';
-    h+='<input class="main-input" type="text" placeholder="대표글 링크를 입력하세요" value="'+escAttr(rec.mainLink)+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" onchange="onMainChange(this)" />';
+    if(locked){
+      h+='<input class="main-input locked" type="text" value="'+escAttr(rec.mainLink||'(마감됨)')+'" disabled />';
+    } else {
+      h+='<input class="main-input" type="text" placeholder="대표글 링크를 입력하세요" value="'+escAttr(rec.mainLink)+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" onchange="onMainChange(this)" />';
+    }
     if(rec.mainLink.trim())h+='<a class="main-link" href="'+escAttr(rec.mainLink)+'" target="_blank" rel="noopener">&#x2197;&#xfe0f;</a>';
     h+='</div></div>';
   }
@@ -590,7 +634,7 @@ function removeImg(ik){
   render();
 }
 document.addEventListener('paste',function(e){
-  if(currentTab!=='record'||e.target.tagName==='INPUT')return;
+  if(currentTab!=='record'||e.target.tagName==='INPUT'||isTodayLocked())return;
   var items=e.clipboardData.items;for(var i=0;i<items.length;i++)if(items[i].type.startsWith('image/')){var zones=document.querySelectorAll('.img-zone:not(.has-img)');if(zones.length>0)handleImageFile(items[i].getAsFile(),zones[0]);e.preventDefault();return}
 });
 function changeDay(delta){selectedDay=Math.max(1,Math.min(DAYS,selectedDay+delta));render()}
