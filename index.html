@@ -550,8 +550,8 @@ function getKSTDay(){
 function isTodayLocked(){
   var kstNow=getKSTDate();
   var kstDay=kstNow.getDate(),kstH=kstNow.getHours();
-  // 4월 2~3일은 4월 4일 자정까지 인증 허용
-  if((selectedDay===2||selectedDay===3)&&kstNow.getFullYear()===YEAR&&kstNow.getMonth()+1===MONTH&&kstDay<=4) return false;
+  // 지난 날짜는 잠금
+  if(selectedDay<kstDay) return true;
   // 오늘 밤 10시 이후 잠금
   if(selectedDay===kstDay && kstH>=22) return true;
   return false;
@@ -607,8 +607,7 @@ function renderDashboard(){
   h+='</span></div><div class="today-grid">';
   var kstNow=getKSTDate();
   var nowHour=kstNow.getHours(),nowDay=kstNow.getDate();
-  // 4월 4일까지는 사이렌 꺼둠
-  var isSirenTime=(nowHour>=22&&nowHour<=23&&!(kstNow.getFullYear()===YEAR&&kstNow.getMonth()+1===MONTH&&nowDay<=4));
+  var isSirenTime=(nowHour>=22&&nowHour<=23);
   for(var i=0;i<todayStatus.length;i++){
     var s=todayStatus[i],dc=s.complete?'dot-green':s.posts>0?'dot-yellow':'dot-red';
     var showSiren=isSirenTime&&!s.complete;
