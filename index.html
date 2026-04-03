@@ -503,7 +503,10 @@ function loadData(){try{var d=localStorage.getItem(STORAGE_KEY);if(d)return JSON
 function loadImgData(){try{var d=localStorage.getItem(IMG_KEY);if(d)return JSON.parse(d)}catch(e){}return{}}
 function save(){
   localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-  db.ref(FB_REC).set(data.records);
+}
+function fbSaveRec(key,rec){
+  var safeKey=key.replace(/\./g,'_dot_').replace(/\//g,'_sl_');
+  db.ref(FB_REC+'/'+safeKey).set(rec);
 }
 function saveImgs(){
   try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){}
@@ -519,7 +522,7 @@ function recKey(m,d){return m+'_'+YEAR+'-'+pad(MONTH)+'-'+pad(d)}
 function imgKey(m,d,p){return recKey(m,d)+'_p'+p}
 function pad(n){return n<10?'0'+n:''+n}
 function getRec(m,d){return data.records[recKey(m,d)]||{posts:['','',''],mainLink:''}}
-function setRec(m,d,rec){data.records[recKey(m,d)]=rec;save()}
+function setRec(m,d,rec){var key=recKey(m,d);data.records[key]=rec;save();fbSaveRec(key,rec)}
 function countPosts(rec){var c=0;for(var i=0;i<3;i++)if(rec.posts[i].trim())c++;return c}
 function hasPost(rec,m,d,i){return rec.posts[i].trim()!==''||!!imgData[imgKey(m,d,i)]}
 function countAll(rec,m,d){var c=0;for(var i=0;i<3;i++)if(hasPost(rec,m,d,i))c++;return c}
@@ -894,7 +897,10 @@ var fbReady=false;
 db.ref(FB_REC).on('value',function(snap){
   var fbRec=snap.val();
   if(fbRec){
-    data.records=fbRec;
+    // Firebase 키를 로컬 키로 변환하여 병합
+    var newRec={};
+    Object.keys(fbRec).forEach(function(k){newRec[fbKeyToLocal(k)]=fbRec[k]});
+    data.records=newRec;
     localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
   }
   if(fbReady)render();
@@ -913,34 +919,32 @@ db.ref(FB_IMG).on('value',function(snap){
 render();
 fbReady=true;
 
-// 기존 localStorage 데이터를 Firebase에 병합 업로드
+// 기존 localStorage 데이터를 Firebase에 개별 병합 업로드
 (function uploadExisting(){
   var localRec=data.records;
   if(Object.keys(localRec).length>0){
-    db.ref(FB_REC).once('value',function(snap){
-      var fbRec=snap.val()||{};
-      var merged=false;
-      Object.keys(localRec).forEach(function(k){
-        // Firebase에 없거나, 로컬이 더 내용이 있으면 병합
-        if(!fbRec[k]){fbRec[k]=localRec[k];merged=true}
-        else{
-          var lr=localRec[k],fr=fbRec[k];
-          for(var p=0;p<3;p++){if(lr.posts&&lr.posts[p]&&(!fr.posts||!fr.posts[p])){if(!fr.posts)fr.posts=['','',''];fr.posts[p]=lr.posts[p];merged=true}}
-          if(lr.mainLink&&!fr.mainLink){fr.mainLink=lr.mainLink;merged=true}
+    Object.keys(localRec).forEach(function(k){
+      var fk=localKeyToFb(k);
+      db.ref(FB_REC+'/'+fk).once('value',function(snap){
+        var fbVal=snap.val();
+        if(!fbVal){
+          db.ref(FB_REC+'/'+fk).set(localRec[k]);
+        } else {
+          // 로컬에 더 내용이 있으면 빈 필드만 채움
+          var lr=localRec[k],changed=false;
+          for(var p=0;p<3;p++){if(lr.posts&&lr.posts[p]&&(!fbVal.posts||!fbVal.posts[p])){if(!fbVal.posts)fbVal.posts=['','',''];fbVal.posts[p]=lr.posts[p];changed=true}}
+          if(lr.mainLink&&!fbVal.mainLink){fbVal.mainLink=lr.mainLink;changed=true}
+          if(changed)db.ref(FB_REC+'/'+fk).set(fbVal);
         }
       });
-      if(merged)db.ref(FB_REC).set(fbRec);
     });
   }
   if(Object.keys(imgData).length>0){
-    db.ref(FB_IMG).once('value',function(snap){
-      var fbImg=snap.val()||{};
-      var merged=false;
-      Object.keys(imgData).forEach(function(k){
-        var fk=localKeyToFb(k);
-        if(!fbImg[fk]){fbImg[fk]=imgData[k];merged=true}
+    Object.keys(imgData).forEach(function(k){
+      var fk=localKeyToFb(k);
+      db.ref(FB_IMG+'/'+fk).once('value',function(snap){
+        if(!snap.val())db.ref(FB_IMG+'/'+fk).set(imgData[k]);
       });
-      if(merged)db.ref(FB_IMG).set(fbImg);
     });
   }
 })();
