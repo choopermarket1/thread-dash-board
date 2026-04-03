@@ -360,7 +360,8 @@ body {
   <button class="tab-btn" data-tab="record">인증기록</button>
   <button class="tab-btn" data-tab="members">멤버관리</button>
   <div class="tab-right">
-    <button class="btn-csv" onclick="exportCSV()">CSV 내보내기</button>
+    <button class="btn-csv" onclick="exportHTML()" style="background:#5a4232">&#x1f4cb; 보고서</button>
+    <button class="btn-csv" onclick="exportCSV()">CSV</button>
   </div>
 </div>
 
@@ -585,6 +586,99 @@ function renderMembers(){
 }
 function addMember(){var input=document.getElementById('newMemberInput'),name=input.value.trim();if(!name)return;if(data.members.indexOf(name)!==-1){alert('이미 존재하는 멤버입니다.');return}data.members.push(name);save();render()}
 function removeMember(name){if(!confirm(name+'님을 삭제하시겠습니까?'))return;data.members=data.members.filter(function(m){return m!==name});Object.keys(data.records).forEach(function(k){if(k.indexOf(name+'_')===0)delete data.records[k]});Object.keys(imgData).forEach(function(k){if(k.indexOf(name+'_')===0)delete imgData[k]});save();saveImgs();render()}
+
+function exportHTML(){
+  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">';
+  html+='<title>스레드 챌린지 보고서 - '+YEAR+'년 '+MONTH+'월</title>';
+  html+='<style>';
+  html+='@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=Inter:wght@400;600;700;800&display=swap");';
+  html+='*{margin:0;padding:0;box-sizing:border-box}';
+  html+='body{font-family:"Noto Sans KR","Inter",sans-serif;background:#faf8f5;color:#2c2418;padding:32px 24px;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
+  html+='.report-header{text-align:center;margin-bottom:36px;padding-bottom:24px;border-bottom:2px solid #e8d5bf}';
+  html+='.report-header h1{font-size:24px;font-weight:800;color:#3d2e1f;letter-spacing:-0.5px}';
+  html+='.report-header p{font-size:13px;color:#8c7e6f;margin-top:6px}';
+  html+='.stats-bar{display:flex;gap:16px;justify-content:center;margin-bottom:32px;flex-wrap:wrap}';
+  html+='.stat-chip{background:#fff;border:1px solid rgba(194,154,108,0.2);border-radius:10px;padding:12px 20px;text-align:center;min-width:120px}';
+  html+='.stat-chip .num{font-size:22px;font-weight:800;color:#2c2418;font-family:"Inter",sans-serif}';
+  html+='.stat-chip .lbl{font-size:10px;color:#8c7e6f;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}';
+  html+='.day-section{margin-bottom:28px;page-break-inside:avoid}';
+  html+='.day-title{font-size:15px;font-weight:700;color:#3d2e1f;margin-bottom:12px;padding:8px 14px;background:linear-gradient(90deg,#f5edda,transparent);border-left:3px solid #c9a84c;border-radius:0 8px 8px 0}';
+  html+='.member-row{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid rgba(194,154,108,0.12);border-radius:12px;margin-bottom:8px;background:#fff}';
+  html+='.member-row.done{border-color:rgba(90,158,111,0.2);background:linear-gradient(135deg,#fff 80%,#eef6f0)}';
+  html+='.m-info{width:140px;flex-shrink:0}';
+  html+='.m-name{font-size:13px;font-weight:700;color:#2c2418}';
+  html+='.m-thread{font-size:10px;color:#c29a6c;text-decoration:none}';
+  html+='.m-status{font-size:10px;margin-top:4px;padding:2px 8px;border-radius:10px;display:inline-block;font-weight:600}';
+  html+='.m-status.ok{background:#eef6f0;color:#5a9e6f}';
+  html+='.m-status.no{background:rgba(0,0,0,0.04);color:#b5a899}';
+  html+='.m-images{display:flex;gap:8px;flex:1;flex-wrap:wrap;align-items:flex-start}';
+  html+='.m-images img{width:100px;height:75px;object-fit:cover;border-radius:8px;border:1px solid rgba(194,154,108,0.15)}';
+  html+='.m-images .empty-slot{width:100px;height:75px;border-radius:8px;border:1.5px dashed rgba(194,154,108,0.2);display:flex;align-items:center;justify-content:center;font-size:10px;color:#b5a899;background:#fdfbf8}';
+  html+='.m-link{flex-shrink:0;width:160px;font-size:11px;word-break:break-all}';
+  html+='.m-link a{color:#c29a6c;text-decoration:none}';
+  html+='.m-link .no-link{color:#b5a899}';
+  html+='.footer{text-align:center;margin-top:40px;padding-top:20px;border-top:1px solid rgba(194,154,108,0.15);font-size:11px;color:#b5a899}';
+  html+='@media print{body{padding:16px}@page{margin:12mm}}';
+  html+='</style></head><body>';
+
+  // Header
+  html+='<div class="report-header"><h1>&#x1f9f5; '+YEAR+'년 '+MONTH+'월 스레드 챌린지 보고서</h1>';
+  html+='<p>생성일: '+new Date().toLocaleDateString('ko-KR')+'</p></div>';
+
+  // Stats
+  var stats=getStats(),totalDone=0;
+  for(var i=0;i<stats.length;i++)totalDone+=stats[i].completed;
+  var today=getTodayDay(),totalPossible=stats.length*today;
+  var pct=totalPossible>0?Math.round(totalDone/totalPossible*100):0;
+  html+='<div class="stats-bar">';
+  html+='<div class="stat-chip"><div class="num">'+pct+'%</div><div class="lbl">전체 달성률</div></div>';
+  html+='<div class="stat-chip"><div class="num">'+data.members.length+'</div><div class="lbl">참여 멤버</div></div>';
+  html+='<div class="stat-chip"><div class="num">'+today+'일째</div><div class="lbl">챌린지 진행</div></div>';
+  html+='</div>';
+
+  // Per day
+  for(var d=1;d<=today;d++){
+    var anyData=false;
+    for(var j=0;j<data.members.length;j++){
+      var m=data.members[j],rec=getRec(m,d);
+      if(countAll(rec,m,d)>0||rec.mainLink.trim()){anyData=true;break}
+    }
+    html+='<div class="day-section"><div class="day-title">'+MONTH+'월 '+d+'일'+(d===today?' (오늘)':'')+(anyData?'':' — 기록 없음')+'</div>';
+    if(anyData){
+      for(var j=0;j<data.members.length;j++){
+        var m=data.members[j],rec=getRec(m,d),cnt=countAll(rec,m,d),done=isComplete(rec,m,d);
+        if(cnt===0&&!rec.mainLink.trim())continue;
+        var tl=MEMBER_THREADS[m]||'';
+        html+='<div class="member-row'+(done?' done':'')+'">';
+        html+='<div class="m-info"><div class="m-name">'+esc(m)+'</div>';
+        if(tl)html+='<a class="m-thread" href="'+tl+'" target="_blank">@'+tl.split('@')[1]+'</a>';
+        html+='<div><span class="m-status '+(done?'ok':'no')+'">'+(done?'✓ 완료':'인증 '+cnt+'/3')+'</span></div></div>';
+        html+='<div class="m-images">';
+        for(var p=0;p<3;p++){
+          var ik=imgKey(m,d,p),hasImg=!!imgData[ik];
+          if(hasImg)html+='<img src="'+imgData[ik]+'" />';
+          else if(rec.posts[p].trim())html+='<div class="empty-slot">링크</div>';
+          else html+='<div class="empty-slot">—</div>';
+        }
+        html+='</div>';
+        html+='<div class="m-link">';
+        if(rec.mainLink.trim())html+='&#x1f517; <a href="'+escAttr(rec.mainLink)+'" target="_blank">'+esc(rec.mainLink.length>30?rec.mainLink.substring(0,30)+'...':rec.mainLink)+'</a>';
+        else html+='<span class="no-link">대표글 없음</span>';
+        html+='</div></div>';
+      }
+    }
+    html+='</div>';
+  }
+
+  html+='<div class="footer">4월 스레드 챌린지 트래커 &middot; 자동 생성 보고서</div>';
+  html+='</body></html>';
+
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='스레드챌린지_보고서_'+YEAR+'년'+MONTH+'월.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
 
 function exportCSV(){
   var csv='\ufeff날짜,멤버,인증글1,인증글2,인증글3,대표글링크,완료여부\n';
