@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>4월 스레드 챌린지 트래커</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -663,7 +666,7 @@ function renderRecord(){
     if(locked){
       h+='<input class="main-input locked" type="text" value="'+escAttr(rec.mainLink||'(마감됨)')+'" disabled />';
     } else {
-      h+='<input class="main-input" type="text" placeholder="대표글 링크를 입력하세요" value="'+escAttr(rec.mainLink)+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" onchange="onMainChange(this)" />';
+      h+='<input class="main-input" type="text" placeholder="대표글 링크를 입력하세요" value="'+escAttr(rec.mainLink)+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" oninput="onMainChange(this)" />';
     }
     if(rec.mainLink.trim())h+='<a class="main-link" href="'+escAttr(rec.mainLink)+'" target="_blank" rel="noopener">&#x2197;&#xfe0f;</a>';
     h+='</div>';
@@ -709,19 +712,26 @@ function changeDay(delta){selectedDay=Math.max(1,Math.min(DAYS,selectedDay+delta
 function jumpDay(d){selectedDay=d;render()}
 function onMainChange(el){var m=el.dataset.member,d=parseInt(el.dataset.day),rec=getRec(m,d);rec.mainLink=el.value;setRec(m,d,rec)}
 function saveAndConfirm(member,day,btn){
-  // 해당 카드의 main-input 값을 다시 한번 저장
+  // 해당 카드의 모든 입력값을 읽어서 저장
   var card=btn.closest('.rec-card');
+  var rec=getRec(member,day);
   var mainInput=card.querySelector('.main-input');
   if(mainInput&&!mainInput.disabled){
-    var rec=getRec(member,day);
     rec.mainLink=mainInput.value;
-    setRec(member,day,rec);
   }
-  save();saveImgs();
+  setRec(member,day,rec);
+  save();
+  try{saveImgs()}catch(e){}
+  // 저장 확인: 실제로 localStorage에 들어갔는지 검증
+  var check=getRec(member,day);
+  var ok=(check.mainLink===rec.mainLink);
   // 토스트 표시
   var toast=card.querySelector('.save-toast');
-  if(toast){toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');
-    setTimeout(function(){toast.classList.remove('show')},2500);
+  if(toast){
+    toast.textContent=ok?'✅ 저장 완료!':'❌ 저장 실패 — 브라우저 저장 공간을 확인해주세요';
+    toast.style.color=ok?'var(--success)':'var(--danger)';
+    toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');
+    setTimeout(function(){toast.classList.remove('show')},3000);
   }
 }
 function openLightbox(ik){var img=imgData[ik];if(!img)return;document.getElementById('lightbox-img').src=img;document.getElementById('lightbox').classList.add('open')}
