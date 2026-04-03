@@ -407,6 +407,20 @@ var MAX_IMG_W=400,IMG_QUALITY=0.55;
 
 var data=loadData(),imgData=loadImgData(),selectedDay=getTodayDay(),currentTab='dashboard';
 
+// 기본 멤버 동기화: 코드에 없는 멤버 제거 + 새 멤버 추가
+(function syncMembers(){
+  var changed=false;
+  // 삭제된 멤버 제거
+  var old=data.members.slice();
+  data.members=data.members.filter(function(m){return DEFAULT_MEMBERS.indexOf(m)!==-1});
+  if(data.members.length!==old.length)changed=true;
+  // 새 멤버 추가
+  for(var i=0;i<DEFAULT_MEMBERS.length;i++){
+    if(data.members.indexOf(DEFAULT_MEMBERS[i])===-1){data.members.push(DEFAULT_MEMBERS[i]);changed=true}
+  }
+  if(changed)save();
+})();
+
 function loadData(){try{var d=localStorage.getItem(STORAGE_KEY);if(d)return JSON.parse(d)}catch(e){}return{members:DEFAULT_MEMBERS.slice(),records:{}}}
 function loadImgData(){try{var d=localStorage.getItem(IMG_KEY);if(d)return JSON.parse(d)}catch(e){}return{}}
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}
