@@ -7,6 +7,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>4월 스레드 챌린지 트래커</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -426,10 +428,16 @@ body {
 </div>
 
 <script>
-var YEAR=2026,MONTH=4,DAYS=30,START_DAY=2; // 챌린지 시작일: 4월 2일
+var YEAR=2026,MONTH=4,DAYS=30,START_DAY=2;
 var STORAGE_KEY='threads-challenge-2026-04';
 var IMG_KEY='threads-challenge-imgs-2026-04';
 var DEFAULT_MEMBERS=['강국어','김성훈','김은전','최덕분','추세은','이광희','BELLA EDIT','silver rain','김혜경'];
+
+// ========== FIREBASE ==========
+firebase.initializeApp({databaseURL:'https://thread-challenge-default-rtdb.firebaseio.com'});
+var db=firebase.database();
+var FB_REC='challenge2026/records';
+var FB_IMG='challenge2026/images';
 var MEMBER_THREADS={
   '강국어':'https://www.threads.net/@kang_moonhak',
   '김성훈':'https://www.threads.net/@for_p_lab',
@@ -494,8 +502,20 @@ var data=loadData(),imgData=loadImgData(),selectedDay=getTodayDay(),currentTab='
 
 function loadData(){try{var d=localStorage.getItem(STORAGE_KEY);if(d)return JSON.parse(d)}catch(e){}return{members:DEFAULT_MEMBERS.slice(),records:{}}}
 function loadImgData(){try{var d=localStorage.getItem(IMG_KEY);if(d)return JSON.parse(d)}catch(e){}return{}}
-function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}
-function saveImgs(){try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){alert('저장 공간이 부족합니다.')}}
+function save(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  db.ref(FB_REC).set(data.records);
+}
+function saveImgs(){
+  try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){}
+}
+function fbSaveImg(key,val){
+  var safeKey=key.replace(/\./g,'_dot_').replace(/\//g,'_sl_');
+  if(val)db.ref(FB_IMG+'/'+safeKey).set(val);
+  else db.ref(FB_IMG+'/'+safeKey).remove();
+}
+function fbKeyToLocal(k){return k.replace(/_dot_/g,'.').replace(/_sl_/g,'/')}
+function localKeyToFb(k){return k.replace(/\./g,'_dot_').replace(/\//g,'_sl_')}
 function recKey(m,d){return m+'_'+YEAR+'-'+pad(MONTH)+'-'+pad(d)}
 function imgKey(m,d,p){return recKey(m,d)+'_p'+p}
 function pad(n){return n<10?'0'+n:''+n}
@@ -696,10 +716,10 @@ function bindImageZones(){
 }
 function handleImageFile(file,zone){
   var m=zone.dataset.member,d=parseInt(zone.dataset.day),p=parseInt(zone.dataset.post);
-  compressImage(file,function(dataUrl){imgData[imgKey(m,d,p)]=dataUrl;saveImgs();var rec=getRec(m,d);if(!rec.posts[p].trim()){rec.posts[p]='[이미지]';setRec(m,d,rec)}render()});
+  compressImage(file,function(dataUrl){var ik=imgKey(m,d,p);imgData[ik]=dataUrl;saveImgs();fbSaveImg(ik,dataUrl);var rec=getRec(m,d);if(!rec.posts[p].trim()){rec.posts[p]='[이미지]';setRec(m,d,rec)}render()});
 }
 function removeImg(ik){
-  delete imgData[ik];saveImgs();
+  delete imgData[ik];saveImgs();fbSaveImg(ik,null);
   var parts=ik.split('_p'),baseKey=parts[0],pIdx=parseInt(parts[1]);
   for(var i=0;i<data.members.length;i++)for(var d=1;d<=DAYS;d++)if(recKey(data.members[i],d)===baseKey){var rec=getRec(data.members[i],d);if(rec.posts[pIdx]==='[이미지]'){rec.posts[pIdx]='';setRec(data.members[i],d,rec)}}
   render();
@@ -864,7 +884,46 @@ function downloadFile(c,f,t){var b=new Blob([c],{type:t}),a=document.createEleme
 function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML}
 function escAttr(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
+// ========== FIREBASE 실시간 동기화 ==========
+var fbReady=false;
+// records 실시간 리스너
+db.ref(FB_REC).on('value',function(snap){
+  var fbRec=snap.val();
+  if(fbRec){
+    data.records=fbRec;
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  }
+  if(fbReady)render();
+});
+// images 실시간 리스너
+db.ref(FB_IMG).on('value',function(snap){
+  var fbImg=snap.val();
+  if(fbImg){
+    imgData={};
+    Object.keys(fbImg).forEach(function(k){imgData[fbKeyToLocal(k)]=fbImg[k]});
+    try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){}
+  }
+  if(fbReady)render();
+});
+// 초기 로드: localStorage 먼저 보여주고 Firebase 데이터 오면 덮어씀
 render();
+fbReady=true;
+
+// 기존 localStorage 데이터가 있으면 Firebase에 올리기 (최초 1회)
+(function uploadExisting(){
+  db.ref(FB_REC).once('value',function(snap){
+    if(!snap.val()&&Object.keys(data.records).length>0){
+      db.ref(FB_REC).set(data.records);
+    }
+  });
+  db.ref(FB_IMG).once('value',function(snap){
+    if(!snap.val()&&Object.keys(imgData).length>0){
+      var fbImgs={};
+      Object.keys(imgData).forEach(function(k){fbImgs[localKeyToFb(k)]=imgData[k]});
+      db.ref(FB_IMG).set(fbImgs);
+    }
+  });
+})();
 </script>
 </body>
 </html>
