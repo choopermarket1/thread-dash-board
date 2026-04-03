@@ -546,14 +546,17 @@ function getKSTDay(){
   return -1;
 }
 function isTodayLocked(){
-  if(selectedDay===getKSTDay() && getKSTHour()>=22) return true;
-  // 4월 2일은 4월 4일 자정까지 인증 허용
-  if(selectedDay===2){
-    var now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
-    var kst=new Date(utc+9*3600000);
-    if(kst.getFullYear()===YEAR&&kst.getMonth()+1===MONTH&&kst.getDate()<=4) return false;
-  }
+  var kstNow=getKSTDate();
+  var kstDay=kstNow.getDate(),kstH=kstNow.getHours();
+  // 4월 2~3일은 4월 4일 자정까지 인증 허용
+  if((selectedDay===2||selectedDay===3)&&kstNow.getFullYear()===YEAR&&kstNow.getMonth()+1===MONTH&&kstDay<=4) return false;
+  // 오늘 밤 10시 이후 잠금
+  if(selectedDay===kstDay && kstH>=22) return true;
   return false;
+}
+function getKSTDate(){
+  var now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
+  return new Date(utc+9*3600000);
 }
 
 function compressImage(file,cb){
