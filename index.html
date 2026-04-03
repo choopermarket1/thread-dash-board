@@ -914,20 +914,36 @@ db.ref(FB_IMG).on('value',function(snap){
 render();
 fbReady=true;
 
-// 기존 localStorage 데이터가 있으면 Firebase에 올리기 (최초 1회)
+// 기존 localStorage 데이터를 Firebase에 병합 업로드
 (function uploadExisting(){
-  db.ref(FB_REC).once('value',function(snap){
-    if(!snap.val()&&Object.keys(data.records).length>0){
-      db.ref(FB_REC).set(data.records);
-    }
-  });
-  db.ref(FB_IMG).once('value',function(snap){
-    if(!snap.val()&&Object.keys(imgData).length>0){
-      var fbImgs={};
-      Object.keys(imgData).forEach(function(k){fbImgs[localKeyToFb(k)]=imgData[k]});
-      db.ref(FB_IMG).set(fbImgs);
-    }
-  });
+  var localRec=data.records;
+  if(Object.keys(localRec).length>0){
+    db.ref(FB_REC).once('value',function(snap){
+      var fbRec=snap.val()||{};
+      var merged=false;
+      Object.keys(localRec).forEach(function(k){
+        // Firebase에 없거나, 로컬이 더 내용이 있으면 병합
+        if(!fbRec[k]){fbRec[k]=localRec[k];merged=true}
+        else{
+          var lr=localRec[k],fr=fbRec[k];
+          for(var p=0;p<3;p++){if(lr.posts&&lr.posts[p]&&(!fr.posts||!fr.posts[p])){if(!fr.posts)fr.posts=['','',''];fr.posts[p]=lr.posts[p];merged=true}}
+          if(lr.mainLink&&!fr.mainLink){fr.mainLink=lr.mainLink;merged=true}
+        }
+      });
+      if(merged)db.ref(FB_REC).set(fbRec);
+    });
+  }
+  if(Object.keys(imgData).length>0){
+    db.ref(FB_IMG).once('value',function(snap){
+      var fbImg=snap.val()||{};
+      var merged=false;
+      Object.keys(imgData).forEach(function(k){
+        var fk=localKeyToFb(k);
+        if(!fbImg[fk]){fbImg[fk]=imgData[k];merged=true}
+      });
+      if(merged)db.ref(FB_IMG).set(fbImg);
+    });
+  }
 })();
 </script>
 </body>
