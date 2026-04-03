@@ -218,6 +218,8 @@ body {
 .day-jump button.dj-sel { background:var(--text); color:#fff; border-color:transparent; box-shadow:var(--shadow-md); }
 .day-jump button.dj-full { background:var(--success-bg); color:var(--success); border-color:rgba(90,158,111,0.25); }
 .day-jump button.dj-part { background:var(--warning-bg); color:var(--accent-deep); border-color:rgba(212,168,85,0.3); }
+.day-jump button.dj-sun:not(.dj-sel) { color:var(--danger); }
+.day-jump button.dj-sat:not(.dj-sel) { color:#4a80c7; }
 
 /* ===== MEMBER RECORD CARD ===== */
 .rec-card {
@@ -405,7 +407,7 @@ body {
 </div>
 
 <script>
-var YEAR=2026,MONTH=4,DAYS=30;
+var YEAR=2026,MONTH=4,DAYS=30,START_DAY=2; // 챌린지 시작일: 4월 2일
 var STORAGE_KEY='threads-challenge-2026-04';
 var IMG_KEY='threads-challenge-imgs-2026-04';
 var DEFAULT_MEMBERS=['강국어','김성훈','김은전','최덕분','추세은','이광희','BELLA EDIT','silver rain','김혜경'];
@@ -451,7 +453,10 @@ function countPosts(rec){var c=0;for(var i=0;i<3;i++)if(rec.posts[i].trim())c++;
 function hasPost(rec,m,d,i){return rec.posts[i].trim()!==''||!!imgData[imgKey(m,d,i)]}
 function countAll(rec,m,d){var c=0;for(var i=0;i<3;i++)if(hasPost(rec,m,d,i))c++;return c}
 function isComplete(rec,m,d){return countAll(rec,m,d)>=3&&rec.mainLink.trim()!==''}
-function getTodayDay(){var n=new Date();if(n.getFullYear()===YEAR&&n.getMonth()+1===MONTH)return n.getDate();return 1}
+function getTodayDay(){var n=new Date();if(n.getFullYear()===YEAR&&n.getMonth()+1===MONTH)return n.getDate();return START_DAY}
+function getChallengeDay(d){return Math.max(0,d-START_DAY+1)} // 4/2=1일째, 4/3=2일째
+function getTodayChallengeDay(){return getChallengeDay(getTodayDay())}
+function getChallengeTotalDays(){return DAYS-START_DAY+1} // 총 챌린지 일수
 function getStorageUsage(){var t=0;for(var k in localStorage)if(localStorage.hasOwnProperty(k))t+=localStorage[k].length*2;return t}
 
 // 한국시간(KST=UTC+9) 기준 잠금 체크
@@ -496,7 +501,7 @@ function render(){
 function renderDashboard(){
   var today=getTodayDay(),stats=getStats(),totalDone=0;
   for(var i=0;i<stats.length;i++)totalDone+=stats[i].completed;
-  var totalPossible=stats.length*today,overallPct=totalPossible>0?Math.round(totalDone/totalPossible*100):0;
+  var cDay=getTodayChallengeDay(),totalPossible=stats.length*cDay,overallPct=totalPossible>0?Math.round(totalDone/totalPossible*100):0;
   var todayStatus=[];
   for(var i=0;i<data.members.length;i++){
     var m=data.members[i],rec=getRec(m,today),posts=countAll(rec,m,today),hasMain=rec.mainLink.trim()!=='';
@@ -506,7 +511,7 @@ function renderDashboard(){
   var h='<div class="summary-grid">';
   h+=sCard('전체 달성률',overallPct+'%','sc-1');
   h+=sCard('오늘 완료',todayDone+'/'+data.members.length,'sc-2');
-  h+=sCard('챌린지 일차',today+'일째','sc-3');
+  h+=sCard('챌린지 일차',cDay+'일째','sc-3');
   h+=sCard('총 멤버',data.members.length+'명','sc-4');
   h+='</div>';
   h+='<div class="card"><div class="card-title"><span class="icon">&#x1f4cc;</span>오늘의 현황 &middot; '+MONTH+'월 '+today+'일</div><div class="today-grid">';
@@ -531,14 +536,14 @@ function renderDashboard(){
     h+='<div class="rank-row"><div class="rank-medal '+mc+'">'+(i+1)+'</div>';
     h+='<span class="rank-name">'+(MEMBER_THREADS[s.name]?'<a href="'+MEMBER_THREADS[s.name]+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none" title="Threads 프로필">'+esc(s.name)+'</a>':esc(s.name))+'</span>';
     h+='<div class="rank-bar-bg"><div class="rank-bar" style="width:'+s.rate+'%"></div><span class="rank-pct">'+s.rate+'%</span></div>';
-    h+='<span class="rank-days">'+s.completed+'/'+DAYS+'</span></div>';
+    h+='<span class="rank-days">'+s.completed+'/'+getChallengeTotalDays()+'</span></div>';
   }
   h+='</div>';
   document.getElementById('panel-dashboard').innerHTML=h;
 }
 function sCard(label,value,cls){return '<div class="summary-card '+cls+'"><div class="label">'+label+'</div><div class="value">'+value+'</div><div class="bar"></div></div>'}
 function getStats(){
-  var s=[];for(var i=0;i<data.members.length;i++){var m=data.members[i],c=0;for(var d=1;d<=DAYS;d++)if(isComplete(getRec(m,d),m,d))c++;s.push({name:m,completed:c,rate:Math.round(c/DAYS*100)})}return s;
+  var totalD=getChallengeTotalDays();var s=[];for(var i=0;i<data.members.length;i++){var m=data.members[i],c=0;for(var d=START_DAY;d<=DAYS;d++)if(isComplete(getRec(m,d),m,d))c++;s.push({name:m,completed:c,rate:Math.round(c/totalD*100)})}return s;
 }
 
 function renderCalendar(){
@@ -571,6 +576,8 @@ function renderRecord(){
     var allDone=true,anyRec=false;
     for(var j=0;j<data.members.length;j++){var m=data.members[j],rec=getRec(m,d);if(!isComplete(rec,m,d))allDone=false;if(countAll(rec,m,d)>0||rec.mainLink.trim())anyRec=true}
     var cls=d===selectedDay?' dj-sel':allDone&&data.members.length>0?' dj-full':anyRec?' dj-part':'';
+    var dow=new Date(YEAR,MONTH-1,d).getDay();
+    if(dow===0)cls+=' dj-sun';else if(dow===6)cls+=' dj-sat';
     h+='<button class="'+cls+'" onclick="jumpDay('+d+')">'+d+'</button>';
   }
   h+='</div>';
@@ -703,12 +710,12 @@ function exportHTML(){
   // Stats
   var stats=getStats(),totalDone=0;
   for(var i=0;i<stats.length;i++)totalDone+=stats[i].completed;
-  var today=getTodayDay(),totalPossible=stats.length*today;
+  var today=getTodayDay(),cDay=getTodayChallengeDay(),totalPossible=stats.length*cDay;
   var pct=totalPossible>0?Math.round(totalDone/totalPossible*100):0;
   html+='<div class="stats-bar">';
   html+='<div class="stat-chip"><div class="num">'+pct+'%</div><div class="lbl">전체 달성률</div></div>';
   html+='<div class="stat-chip"><div class="num">'+data.members.length+'</div><div class="lbl">참여 멤버</div></div>';
-  html+='<div class="stat-chip"><div class="num">'+today+'일째</div><div class="lbl">챌린지 진행</div></div>';
+  html+='<div class="stat-chip"><div class="num">'+cDay+'일째</div><div class="lbl">챌린지 진행</div></div>';
   html+='</div>';
 
   // Per day
