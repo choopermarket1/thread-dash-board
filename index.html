@@ -474,7 +474,14 @@ function getKSTDay(){
   return -1;
 }
 function isTodayLocked(){
-  return getKSTHour()>=22 && selectedDay===getKSTDay();
+  if(selectedDay===getKSTDay() && getKSTHour()>=22) return true;
+  // 4월 2일은 4월 4일 자정까지 인증 허용
+  if(selectedDay===2){
+    var now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
+    var kst=new Date(utc+9*3600000);
+    if(kst.getFullYear()===YEAR&&kst.getMonth()+1===MONTH&&kst.getDate()<=4) return false;
+  }
+  return false;
 }
 
 function compressImage(file,cb){
