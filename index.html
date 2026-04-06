@@ -561,8 +561,8 @@ function isTodayLocked(){
   var kstDay=kstNow.getDate(),kstH=kstNow.getHours();
   // 지난 날짜는 잠금
   if(selectedDay<kstDay) return true;
-  // 오늘 밤 10시 이후 잠금
-  if(selectedDay===kstDay && kstH>=22) return true;
+  // 오늘은 자정까지 입력 가능 (잠금 없음)
+  if(selectedDay===kstDay) return false;
   return false;
 }
 function getKSTDate(){
