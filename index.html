@@ -531,7 +531,7 @@ function recKey(m,d){return m+'_'+YEAR+'-'+pad(MONTH)+'-'+pad(d)}
 function imgKey(m,d,p){return recKey(m,d)+'_p'+p}
 function pad(n){return n<10?'0'+n:''+n}
 function getRec(m,d){return data.records[recKey(m,d)]||{posts:['','',''],mainLink:''}}
-function setRec(m,d,rec){var key=recKey(m,d);data.records[key]=rec;save();localSaving=true;fbSaveRec(key,rec)}
+function setRec(m,d,rec){var key=recKey(m,d);data.records[key]=rec;save();fbSaveRec(key,rec)}
 function countPosts(rec){var c=0;for(var i=0;i<3;i++)if(rec.posts[i].trim())c++;return c}
 function hasPost(rec,m,d,i){
   // 실제 이미지가 있거나, '[이미지]'가 아닌 실제 링크가 있을 때만 인정
@@ -762,10 +762,10 @@ function bindImageZones(){
 }
 function handleImageFile(file,zone){
   var m=zone.dataset.member,d=parseInt(zone.dataset.day),p=parseInt(zone.dataset.post);
-  compressImage(file,function(dataUrl){var ik=imgKey(m,d,p);imgData[ik]=dataUrl;saveImgs();localSaving=true;fbSaveImg(ik,dataUrl);var rec=getRec(m,d);if(!rec.posts[p].trim()){rec.posts[p]='[이미지]';setRec(m,d,rec)}render()});
+  compressImage(file,function(dataUrl){var ik=imgKey(m,d,p);imgData[ik]=dataUrl;saveImgs();fbSaveImg(ik,dataUrl);var rec=getRec(m,d);if(!rec.posts[p].trim()){rec.posts[p]='[이미지]';setRec(m,d,rec)}render()});
 }
 function removeImg(ik){
-  delete imgData[ik];saveImgs();localSaving=true;fbSaveImg(ik,null);
+  delete imgData[ik];saveImgs();fbSaveImg(ik,null);
   var parts=ik.split('_p'),baseKey=parts[0],pIdx=parseInt(parts[1]);
   for(var i=0;i<data.members.length;i++)for(var d=1;d<=DAYS;d++)if(recKey(data.members[i],d)===baseKey){var rec=getRec(data.members[i],d);if(rec.posts[pIdx]==='[이미지]'){rec.posts[pIdx]='';setRec(data.members[i],d,rec)}}
   render();
@@ -932,65 +932,56 @@ function escAttr(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replac
 
 // ========== FIREBASE 실시간 동기화 ==========
 var fbReady=false;
-var localSaving=false; // 내가 저장 중인지 플래그
 
-// records 실시간 리스너
-db.ref(FB_REC).on('value',function(snap){
+// records: 개별 child 리스너 (전체 덮어쓰기 방지)
+db.ref(FB_REC).on('child_changed',function(snap){
+  var localKey=fbKeyToLocal(snap.key);
+  data.records[localKey]=snap.val();
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  // 인증기록 편집 중이면 렌더링 안함
+  if(fbReady&&currentTab!=='record')render();
+});
+db.ref(FB_REC).on('child_added',function(snap){
+  var localKey=fbKeyToLocal(snap.key);
+  data.records[localKey]=snap.val();
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  if(fbReady&&currentTab!=='record')render();
+});
+
+// images: 개별 child 리스너
+db.ref(FB_IMG).on('child_changed',function(snap){
+  imgData[fbKeyToLocal(snap.key)]=snap.val();
+  try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){}
+  if(fbReady&&currentTab!=='record')render();
+});
+db.ref(FB_IMG).on('child_added',function(snap){
+  imgData[fbKeyToLocal(snap.key)]=snap.val();
+  try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){}
+  if(fbReady&&currentTab!=='record')render();
+});
+db.ref(FB_IMG).on('child_removed',function(snap){
+  delete imgData[fbKeyToLocal(snap.key)];
+  try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){}
+  if(fbReady&&currentTab!=='record')render();
+});
+
+// 초기 로드: Firebase에서 전체 한번 가져오기
+db.ref(FB_REC).once('value',function(snap){
   var fbRec=snap.val();
   if(fbRec){
-    var newRec={};
-    Object.keys(fbRec).forEach(function(k){newRec[fbKeyToLocal(k)]=fbRec[k]});
-    data.records=newRec;
+    Object.keys(fbRec).forEach(function(k){data.records[fbKeyToLocal(k)]=fbRec[k]});
     localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
   }
-  // 내가 저장한 거면 렌더링 스킵 (편집 중 화면 꼬임 방지)
-  if(localSaving){localSaving=false;return}
-  if(fbReady)render();
+  db.ref(FB_IMG).once('value',function(snap2){
+    var fbImg=snap2.val();
+    if(fbImg){
+      Object.keys(fbImg).forEach(function(k){imgData[fbKeyToLocal(k)]=fbImg[k]});
+      try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){}
+    }
+    render();
+    fbReady=true;
+  });
 });
-// images 실시간 리스너
-db.ref(FB_IMG).on('value',function(snap){
-  var fbImg=snap.val();
-  if(fbImg){
-    imgData={};
-    Object.keys(fbImg).forEach(function(k){imgData[fbKeyToLocal(k)]=fbImg[k]});
-    try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){}
-  }
-  if(localSaving)return;
-  if(fbReady)render();
-});
-// 초기 로드: localStorage 먼저 보여주고 Firebase 데이터 오면 덮어씀
-render();
-fbReady=true;
-
-// 기존 localStorage 데이터를 Firebase에 개별 병합 업로드
-(function uploadExisting(){
-  var localRec=data.records;
-  if(Object.keys(localRec).length>0){
-    Object.keys(localRec).forEach(function(k){
-      var fk=localKeyToFb(k);
-      db.ref(FB_REC+'/'+fk).once('value',function(snap){
-        var fbVal=snap.val();
-        if(!fbVal){
-          db.ref(FB_REC+'/'+fk).set(localRec[k]);
-        } else {
-          // 로컬에 더 내용이 있으면 빈 필드만 채움
-          var lr=localRec[k],changed=false;
-          for(var p=0;p<3;p++){if(lr.posts&&lr.posts[p]&&(!fbVal.posts||!fbVal.posts[p])){if(!fbVal.posts)fbVal.posts=['','',''];fbVal.posts[p]=lr.posts[p];changed=true}}
-          if(lr.mainLink&&!fbVal.mainLink){fbVal.mainLink=lr.mainLink;changed=true}
-          if(changed)db.ref(FB_REC+'/'+fk).set(fbVal);
-        }
-      });
-    });
-  }
-  if(Object.keys(imgData).length>0){
-    Object.keys(imgData).forEach(function(k){
-      var fk=localKeyToFb(k);
-      db.ref(FB_IMG+'/'+fk).once('value',function(snap){
-        if(!snap.val())db.ref(FB_IMG+'/'+fk).set(imgData[k]);
-      });
-    });
-  }
-})();
 </script>
 </body>
 </html>
