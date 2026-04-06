@@ -533,7 +533,13 @@ function pad(n){return n<10?'0'+n:''+n}
 function getRec(m,d){return data.records[recKey(m,d)]||{posts:['','',''],mainLink:''}}
 function setRec(m,d,rec){var key=recKey(m,d);data.records[key]=rec;save();localSaving=true;fbSaveRec(key,rec)}
 function countPosts(rec){var c=0;for(var i=0;i<3;i++)if(rec.posts[i].trim())c++;return c}
-function hasPost(rec,m,d,i){return rec.posts[i].trim()!==''||!!imgData[imgKey(m,d,i)]}
+function hasPost(rec,m,d,i){
+  // 실제 이미지가 있거나, '[이미지]'가 아닌 실제 링크가 있을 때만 인정
+  if(imgData[imgKey(m,d,i)]) return true;
+  var txt=rec.posts[i].trim();
+  if(txt&&txt!=='[이미지]') return true;
+  return false;
+}
 function countAll(rec,m,d){var c=0;for(var i=0;i<3;i++)if(hasPost(rec,m,d,i))c++;return c}
 function isComplete(rec,m,d){return countAll(rec,m,d)>=3&&rec.mainLink.trim()!==''}
 function getTodayDay(){var n=new Date();if(n.getFullYear()===YEAR&&n.getMonth()+1===MONTH)return n.getDate();return START_DAY}
@@ -559,6 +565,8 @@ function getKSTDay(){
 function isTodayLocked(){
   var kstNow=getKSTDate();
   var kstDay=kstNow.getDate(),kstH=kstNow.getHours();
+  // 4월 4일은 4월 5일 자정까지 인증 허용
+  if(selectedDay===4&&kstNow.getFullYear()===YEAR&&kstNow.getMonth()+1===MONTH&&kstDay<=5) return false;
   // 지난 날짜는 잠금
   if(selectedDay<kstDay) return true;
   // 오늘은 자정까지 입력 가능 (잠금 없음)
