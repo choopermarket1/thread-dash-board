@@ -746,13 +746,17 @@ function renderRecord(){
   bindImageZones();
 }
 
+var lastFocusedZone=null;
 function bindImageZones(){
+  lastFocusedZone=null;
   document.querySelectorAll('.img-zone').forEach(function(zone){
     zone.addEventListener('click',function(e){
+      lastFocusedZone=zone;
       if(e.target.classList.contains('img-preview')||e.target.classList.contains('img-remove'))return;
       var input=document.createElement('input');input.type='file';input.accept='image/*';
       input.onchange=function(ev){var file=ev.target.files[0];if(file)handleImageFile(file,zone)};input.click();
     });
+    zone.addEventListener('mouseenter',function(){lastFocusedZone=zone});
     zone.addEventListener('dragover',function(e){e.preventDefault();zone.classList.add('dragover')});
     zone.addEventListener('dragleave',function(){zone.classList.remove('dragover')});
     zone.addEventListener('drop',function(e){e.preventDefault();zone.classList.remove('dragover');var f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))handleImageFile(f,zone)});
@@ -771,8 +775,19 @@ function removeImg(ik){
   render();
 }
 document.addEventListener('paste',function(e){
-  if(currentTab!=='record'||e.target.tagName==='INPUT'||isTodayLocked())return;
-  var items=e.clipboardData.items;for(var i=0;i<items.length;i++)if(items[i].type.startsWith('image/')){var zones=document.querySelectorAll('.img-zone:not(.has-img)');if(zones.length>0)handleImageFile(items[i].getAsFile(),zones[0]);e.preventDefault();return}
+  if(currentTab!=='record'||e.target.tagName==='INPUT')return;
+  var items=e.clipboardData.items;
+  for(var i=0;i<items.length;i++)if(items[i].type.startsWith('image/')){
+    // 마지막으로 마우스를 올린/클릭한 zone으로 붙여넣기 (없거나 이미 이미지 있으면 무시)
+    if(lastFocusedZone&&!lastFocusedZone.classList.contains('has-img')){
+      handleImageFile(items[i].getAsFile(),lastFocusedZone);
+      e.preventDefault();
+    } else {
+      alert('이미지를 붙여넣을 인증 슬롯을 먼저 클릭해주세요.');
+      e.preventDefault();
+    }
+    return;
+  }
 });
 function changeDay(delta){selectedDay=Math.max(1,Math.min(DAYS,selectedDay+delta));render()}
 function jumpDay(d){selectedDay=d;render()}
