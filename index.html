@@ -9,7 +9,7 @@
 <title>4월 스레드 챌린지 트래커 v12</title>
 <script>
 // 캐시 강제 새로고침: 버전이 바뀌면 자동 리로드
-var APP_VER='v12';
+var APP_VER='v13';
 if(localStorage.getItem('app_ver')!==APP_VER){localStorage.setItem('app_ver',APP_VER);location.reload(true);}
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -548,10 +548,9 @@ function getRec(m,d){
 function setRec(m,d,rec){var key=recKey(m,d);data.records[key]=rec;save();fbSaveRec(key,rec)}
 function countPosts(rec){var c=0;for(var i=0;i<3;i++)if(rec.posts[i].trim())c++;return c}
 function hasPost(rec,m,d,i){
-  // 실제 이미지가 있거나, '[이미지]'가 아닌 실제 링크가 있을 때만 인정
   if(imgData[imgKey(m,d,i)]) return true;
-  var txt=rec.posts[i].trim();
-  if(txt&&txt!=='[이미지]') return true;
+  var txt=(rec.posts[i]||'').trim();
+  if(txt) return true;
   return false;
 }
 function countAll(rec,m,d){var c=0;for(var i=0;i<3;i++)if(hasPost(rec,m,d,i))c++;return c}
