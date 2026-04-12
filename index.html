@@ -732,7 +732,7 @@ function renderRecord(){
     if(locked){
       h+='<input class="main-input" type="text" value="'+escAttr(rec.mainLink||'')+'" disabled style="opacity:0.7" />';
     } else {
-      h+='<input class="main-input" type="text" placeholder="대표글 링크를 입력하세요" value="'+escAttr(rec.mainLink)+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" oninput="onMainChange(this)" />';
+      h+='<input class="main-input" type="text" placeholder="대표글 링크를 입력하세요" value="'+escAttr(rec.mainLink)+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" />';
     }
     if(rec.mainLink.trim())h+='<a class="main-link" href="'+escAttr(rec.mainLink)+'" target="_blank" rel="noopener">&#x2197;&#xfe0f;</a>';
     h+='</div>';
@@ -791,29 +791,35 @@ document.addEventListener('paste',function(e){
 });
 function changeDay(delta){selectedDay=Math.max(1,Math.min(DAYS,selectedDay+delta));render()}
 function jumpDay(d){selectedDay=d;render()}
-function onMainChange(el){var m=el.dataset.member,d=parseInt(el.dataset.day),rec=getRec(m,d);rec.mainLink=el.value;setRec(m,d,rec)}
 function saveAndConfirm(member,day,btn){
-  // 해당 카드의 모든 입력값을 읽어서 저장
   var card=btn.closest('.rec-card');
   var rec=getRec(member,day);
+  // 카드 안의 링크 입력값 읽기
   var mainInput=card.querySelector('.main-input');
   if(mainInput&&!mainInput.disabled){
-    rec.mainLink=mainInput.value;
+    rec.mainLink=mainInput.value.trim();
   }
-  setRec(member,day,rec);
+  // 저장 (localStorage + Firebase)
+  var key=recKey(member,day);
+  data.records[key]=rec;
   save();
-  try{saveImgs()}catch(e){}
-  // 저장 확인: 실제로 localStorage에 들어갔는지 검증
-  var check=getRec(member,day);
-  var ok=(check.mainLink===rec.mainLink);
-  // 토스트 표시
+  // Firebase에 직접 저장 + 성공/실패 확인
+  var safeKey=key.replace(/\./g,'_dot_').replace(/\//g,'_sl_');
   var toast=card.querySelector('.save-toast');
-  if(toast){
-    toast.textContent=ok?'✅ 저장 완료!':'❌ 저장 실패 — 브라우저 저장 공간을 확인해주세요';
-    toast.style.color=ok?'var(--success)':'var(--danger)';
-    toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');
-    setTimeout(function(){toast.classList.remove('show')},3000);
-  }
+  db.ref(FB_REC+'/'+safeKey).set(rec).then(function(){
+    if(toast){
+      toast.textContent='✅ 저장 완료!';
+      toast.style.color='var(--success)';
+      toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');
+      setTimeout(function(){toast.classList.remove('show')},3000);
+    }
+  }).catch(function(err){
+    if(toast){
+      toast.textContent='❌ 저장 실패: '+err.message;
+      toast.style.color='var(--danger)';
+      toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');
+    }
+  });
 }
 function openLightbox(ik){var img=imgData[ik];if(!img)return;document.getElementById('lightbox-img').src=img;document.getElementById('lightbox').classList.add('open')}
 function closeLightbox(){document.getElementById('lightbox').classList.remove('open')}
