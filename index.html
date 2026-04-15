@@ -9,8 +9,16 @@
 <title>4월 스레드 챌린지 트래커 v12</title>
 <script>
 // 캐시 강제 새로고침: 버전이 바뀌면 자동 리로드
-var APP_VER='v17';
-if(localStorage.getItem('app_ver')!==APP_VER){localStorage.setItem('app_ver',APP_VER);location.reload(true);}
+var APP_VER='v18';
+try{
+  // 꽉 찬 localStorage 자동 정리
+  localStorage.removeItem('threads-challenge-imgs-2026-04');
+  localStorage.removeItem('threads-challenge-2026-04');
+  if(localStorage.getItem('app_ver')!==APP_VER){localStorage.setItem('app_ver',APP_VER);location.reload(true);}
+}catch(e){
+  try{localStorage.clear()}catch(e2){}
+  location.reload(true);
+}
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
