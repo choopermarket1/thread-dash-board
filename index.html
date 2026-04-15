@@ -9,7 +9,7 @@
 <title>4월 스레드 챌린지 트래커 v12</title>
 <script>
 // 캐시 강제 새로고침: 버전이 바뀌면 자동 리로드
-var APP_VER='v16';
+var APP_VER='v17';
 if(localStorage.getItem('app_ver')!==APP_VER){localStorage.setItem('app_ver',APP_VER);location.reload(true);}
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -521,14 +521,14 @@ var data=loadData(),imgData=loadImgData(),selectedDay=getTodayDay(),currentTab='
 function loadData(){try{var d=localStorage.getItem(STORAGE_KEY);if(d)return JSON.parse(d)}catch(e){}return{members:DEFAULT_MEMBERS.slice(),records:{}}}
 function loadImgData(){try{var d=localStorage.getItem(IMG_KEY);if(d)return JSON.parse(d)}catch(e){}return{}}
 function save(){
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}catch(e){}
 }
 function fbSaveRec(key,rec){
   var safeKey=key.replace(/\./g,'_dot_').replace(/\//g,'_sl_');
   db.ref(FB_REC+'/'+safeKey).set(rec);
 }
 function saveImgs(){
-  try{localStorage.setItem(IMG_KEY,JSON.stringify(imgData))}catch(e){}
+  // localStorage에 이미지 저장 안함 (용량 초과 방지) — Firebase만 사용
 }
 function fbSaveImg(key,val){
   var safeKey=key.replace(/\./g,'_dot_').replace(/\//g,'_sl_');
@@ -1046,14 +1046,14 @@ var fbReady=false;
 db.ref(FB_REC).on('child_changed',function(snap){
   var localKey=fbKeyToLocal(snap.key);
   data.records[localKey]=snap.val();
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}catch(e){}
   // 인증기록 편집 중이면 렌더링 안함
   if(fbReady&&currentTab!=='record')render();
 });
 db.ref(FB_REC).on('child_added',function(snap){
   var localKey=fbKeyToLocal(snap.key);
   data.records[localKey]=snap.val();
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}catch(e){}
   if(fbReady&&currentTab!=='record')render();
 });
 
@@ -1079,7 +1079,7 @@ db.ref(FB_REC).once('value',function(snap){
   var fbRec=snap.val();
   if(fbRec){
     Object.keys(fbRec).forEach(function(k){data.records[fbKeyToLocal(k)]=fbRec[k]});
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}catch(e){}
   }
   db.ref(FB_IMG).once('value',function(snap2){
     var fbImg=snap2.val();
