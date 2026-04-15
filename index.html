@@ -9,7 +9,7 @@
 <title>4월 스레드 챌린지 트래커 v12</title>
 <script>
 // 캐시 강제 새로고침: 버전이 바뀌면 자동 리로드
-var APP_VER='v14';
+var APP_VER='v15';
 if(localStorage.getItem('app_ver')!==APP_VER){localStorage.setItem('app_ver',APP_VER);location.reload(true);}
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -780,6 +780,7 @@ function bindImageZones(){
 }
 function handleImageFile(file,zone){
   var m=zone.dataset.member,d=parseInt(zone.dataset.day),p=parseInt(zone.dataset.post);
+  var card=zone.closest('.rec-card');
   compressImage(file,function(dataUrl){
     var ik=imgKey(m,d,p);
     imgData[ik]=dataUrl;
@@ -795,11 +796,28 @@ function handleImageFile(file,zone){
         if(!rec.posts)rec.posts=['','',''];
         if(!Array.isArray(rec.posts))rec.posts=['','',''];
         while(rec.posts.length<3)rec.posts.push('');
+        // 현재 입력 중인 링크 보존
+        var cards=document.querySelectorAll('.rec-card');
+        cards.forEach(function(card){
+          var mi=card.querySelector('.main-input');
+          if(mi&&mi.dataset&&mi.dataset.member===m){
+            rec.mainLink=mi.value.trim()||rec.mainLink;
+          }
+        });
         rec.posts[p]='[이미지]';
         data.records[key]=rec;
         save();
         db.ref(FB_REC+'/'+safeRecKey).set(rec);
-        render();
+        // 해당 zone만 업데이트 (render() 호출 안 함 — 링크 입력 보존)
+        zone.classList.add('has-img');
+        zone.innerHTML='<span class="img-num">인증 '+(p+1)+'</span>'
+          +'<img class="img-preview" src="'+dataUrl+'" onclick="openLightbox(\''+escAttr(ik)+'\')" />'
+          +'<button class="img-remove" onclick="event.stopPropagation();removeImg(\''+escAttr(ik)+'\')">&times;</button>';
+        // 배지 업데이트
+        var badge=card?card.querySelector('.rec-badge'):null;
+        if(badge){var cnt=countAll(rec,m,d);badge.textContent=isComplete(rec,m,d)?'✓':cnt}
+        var status=card?card.querySelector('.rec-status'):null;
+        if(status){var cnt2=countAll(rec,m,d);status.textContent=isComplete(rec,m,d)?'완료':'인증 '+cnt2+'/3'}
       });
     }).catch(function(err){
       alert('이미지 저장 실패: '+err.message);
