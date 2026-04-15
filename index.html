@@ -9,7 +9,7 @@
 <title>4월 스레드 챌린지 트래커 v12</title>
 <script>
 // 캐시 강제 새로고침: 버전이 바뀌면 자동 리로드
-var APP_VER='v13';
+var APP_VER='v14';
 if(localStorage.getItem('app_ver')!==APP_VER){localStorage.setItem('app_ver',APP_VER);location.reload(true);}
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -424,6 +424,7 @@ body {
   <button class="tab-btn" data-tab="record">인증기록</button>
   <button class="tab-btn" data-tab="members">멤버관리</button>
   <div class="tab-right">
+    <span id="fb-status" style="font-size:10px;padding:4px 10px;border-radius:8px;margin-right:6px">&#x23f3;</span>
     <button class="btn-csv" onclick="exportHTML()" style="background:#5a4232">&#x1f4cb; 보고서</button>
     <button class="btn-csv" onclick="exportCSV()">CSV</button>
   </div>
@@ -779,7 +780,31 @@ function bindImageZones(){
 }
 function handleImageFile(file,zone){
   var m=zone.dataset.member,d=parseInt(zone.dataset.day),p=parseInt(zone.dataset.post);
-  compressImage(file,function(dataUrl){var ik=imgKey(m,d,p);imgData[ik]=dataUrl;saveImgs();fbSaveImg(ik,dataUrl);var rec=getRec(m,d);if(!rec.posts[p].trim()){rec.posts[p]='[이미지]';setRec(m,d,rec)}render()});
+  compressImage(file,function(dataUrl){
+    var ik=imgKey(m,d,p);
+    imgData[ik]=dataUrl;
+    saveImgs();
+    // Firebase에 이미지 저장
+    var safeKey=localKeyToFb(ik);
+    db.ref(FB_IMG+'/'+safeKey).set(dataUrl).then(function(){
+      // 이미지 저장 성공 → posts 업데이트
+      var key=recKey(m,d);
+      var safeRecKey=localKeyToFb(key);
+      db.ref(FB_REC+'/'+safeRecKey).once('value',function(snap){
+        var rec=snap.val()||{posts:['','',''],mainLink:''};
+        if(!rec.posts)rec.posts=['','',''];
+        if(!Array.isArray(rec.posts))rec.posts=['','',''];
+        while(rec.posts.length<3)rec.posts.push('');
+        rec.posts[p]='[이미지]';
+        data.records[key]=rec;
+        save();
+        db.ref(FB_REC+'/'+safeRecKey).set(rec);
+        render();
+      });
+    }).catch(function(err){
+      alert('이미지 저장 실패: '+err.message);
+    });
+  });
 }
 function removeImg(ik){
   delete imgData[ik];saveImgs();fbSaveImg(ik,null);
@@ -806,38 +831,47 @@ function changeDay(delta){selectedDay=Math.max(1,Math.min(DAYS,selectedDay+delta
 function jumpDay(d){selectedDay=d;render()}
 function saveAndConfirm(member,day,btn){
   var card=btn.closest('.rec-card');
-  // 깊은 복사로 새 객체 생성
-  var oldRec=getRec(member,day);
-  var rec={posts:oldRec.posts.slice(),mainLink:oldRec.mainLink};
-  // 카드 안의 링크 입력값 읽기
-  var mainInput=card.querySelector('.main-input');
-  if(mainInput&&!mainInput.disabled){
-    rec.mainLink=mainInput.value.trim();
-  }
-  // localStorage 저장
-  var key=recKey(member,day);
-  data.records[key]=rec;
-  save();
-  // Firebase 저장
-  var safeKey=key.replace(/\./g,'_dot_').replace(/\//g,'_sl_');
   var toast=card.querySelector('.save-toast');
-  db.ref(FB_REC+'/'+safeKey).set({
-    posts:rec.posts,
-    mainLink:rec.mainLink
-  }).then(function(){
-    if(toast){
-      toast.textContent='✅ '+member+' 저장 완료! (링크: '+(rec.mainLink?'O':'X')+')';
-      toast.style.color='var(--success)';
-      toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');
-      setTimeout(function(){toast.classList.remove('show')},4000);
-    }
-  }).catch(function(err){
-    if(toast){
-      toast.textContent='❌ 저장 실패: '+err.message;
-      toast.style.color='var(--danger)';
-      toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');
-    }
-  });
+  function showToast(msg,ok){
+    if(!toast)return;
+    toast.textContent=msg;
+    toast.style.color=ok?'var(--success)':'var(--danger)';
+    toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');
+    if(ok)setTimeout(function(){toast.classList.remove('show')},4000);
+  }
+  try{
+    // 1) 현재 Firebase에서 최신 레코드 가져오기
+    var key=recKey(member,day);
+    var safeKey=localKeyToFb(key);
+    showToast('⏳ 저장 중...',true);
+    db.ref(FB_REC+'/'+safeKey).once('value',function(snap){
+      try{
+        // 2) 기존 데이터 위에 링크만 업데이트
+        var rec=snap.val()||{posts:['','',''],mainLink:''};
+        if(!rec.posts)rec.posts=['','',''];
+        if(!Array.isArray(rec.posts))rec.posts=['','',''];
+        while(rec.posts.length<3)rec.posts.push('');
+        // 3) 카드의 링크 입력값 읽기
+        var mainInput=card.querySelector('.main-input');
+        if(mainInput&&!mainInput.disabled){
+          rec.mainLink=mainInput.value.trim();
+        }
+        // 4) localStorage에 저장
+        data.records[key]=rec;
+        save();
+        // 5) Firebase에 저장
+        db.ref(FB_REC+'/'+safeKey).set(rec).then(function(){
+          showToast('✅ '+member+' 저장 완료!',true);
+        }).catch(function(err){
+          showToast('❌ Firebase 저장 실패: '+err.message,false);
+        });
+      }catch(e){
+        showToast('❌ 처리 오류: '+e.message,false);
+      }
+    });
+  }catch(e){
+    showToast('❌ 오류: '+e.message,false);
+  }
 }
 function openLightbox(ik){var img=imgData[ik];if(!img)return;document.getElementById('lightbox-img').src=img;document.getElementById('lightbox').classList.add('open')}
 function closeLightbox(){document.getElementById('lightbox').classList.remove('open')}
@@ -968,6 +1002,20 @@ function resetData(){if(!confirm('모든 데이터를 초기화하시겠습니�
 function downloadFile(c,f,t){var b=new Blob([c],{type:t}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f;document.body.appendChild(a);a.click();document.body.removeChild(a)}
 function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML}
 function escAttr(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ========== FIREBASE 상태 체크 ==========
+var fbStatus=document.getElementById('fb-status');
+function setFbStatus(ok,msg){
+  if(!fbStatus)return;
+  fbStatus.textContent=ok?'🟢 연결됨':'🔴 '+msg;
+  fbStatus.style.background=ok?'#eef6f0':'#fde8e8';
+  fbStatus.style.color=ok?'#5a9e6f':'#c75d5d';
+}
+// Firebase 연결 테스트
+db.ref('.info/connected').on('value',function(snap){
+  if(snap.val()===true)setFbStatus(true);
+  else setFbStatus(false,'연결 끊김');
+});
 
 // ========== FIREBASE 실시간 동기화 ==========
 var fbReady=false;
