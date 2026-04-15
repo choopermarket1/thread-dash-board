@@ -9,7 +9,7 @@
 <title>4월 스레드 챌린지 트래커 v12</title>
 <script>
 // 캐시 강제 새로고침: 버전이 바뀌면 자동 리로드
-var APP_VER='v15';
+var APP_VER='v16';
 if(localStorage.getItem('app_ver')!==APP_VER){localStorage.setItem('app_ver',APP_VER);location.reload(true);}
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -274,6 +274,10 @@ body {
 .img-zone-label { font-size:11px; color:var(--text-muted); font-weight:500; pointer-events:none; line-height:1.6; }
 .img-zone-label strong { color:var(--primary-deep); }
 .img-zone-icon { font-size:26px; margin-bottom:6px; opacity:0.3; pointer-events:none; }
+.img-file-input {
+  position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; z-index:2;
+}
+.img-zone.has-img .img-file-input { display:none; }
 
 /* ===== LOCKED STATE ===== */
 .locked-banner {
@@ -738,7 +742,7 @@ function renderRecord(){
         h+='<div class="img-zone'+(hasImg?' has-img':'')+'" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" data-post="'+p+'">';
         h+='<span class="img-num">인증 '+(p+1)+'</span>';
         if(hasImg){h+='<img class="img-preview" src="'+imgData[ik]+'" onclick="openLightbox(\''+escAttr(ik)+'\')" />';h+='<button class="img-remove" onclick="event.stopPropagation();removeImg(\''+escAttr(ik)+'\')">&times;</button>';}
-        else{h+='<div class="img-zone-icon">&#x1f4f7;</div><div class="img-zone-label"><strong>클릭</strong> · <strong>붙여넣기</strong> · <strong>드래그</strong></div>'}
+        else{h+='<input type="file" accept="image/*" class="img-file-input" data-member="'+escAttr(m)+'" data-day="'+selectedDay+'" data-post="'+p+'" onchange="onFileSelect(this)" /><div class="img-zone-icon">&#x1f4f7;</div><div class="img-zone-label"><strong>탭</strong>하여 사진 선택</div>'}
         h+='</div>';
       }
     }
@@ -761,15 +765,15 @@ function renderRecord(){
 }
 
 var lastFocusedZone=null;
+function onFileSelect(input){
+  var file=input.files[0];if(!file)return;
+  var zone=input.closest('.img-zone');
+  if(zone)handleImageFile(file,zone);
+}
 function bindImageZones(){
   lastFocusedZone=null;
   document.querySelectorAll('.img-zone').forEach(function(zone){
-    zone.addEventListener('click',function(e){
-      lastFocusedZone=zone;
-      if(e.target.classList.contains('img-preview')||e.target.classList.contains('img-remove'))return;
-      var input=document.createElement('input');input.type='file';input.accept='image/*';
-      input.onchange=function(ev){var file=ev.target.files[0];if(file)handleImageFile(file,zone)};input.click();
-    });
+    zone.addEventListener('click',function(e){lastFocusedZone=zone;});
     zone.addEventListener('mouseenter',function(){lastFocusedZone=zone});
     zone.addEventListener('dragover',function(e){e.preventDefault();zone.classList.add('dragover')});
     zone.addEventListener('dragleave',function(){zone.classList.remove('dragover')});
