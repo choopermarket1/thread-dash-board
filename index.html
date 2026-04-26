@@ -9,7 +9,7 @@
 <title>4월 스레드 챌린지 트래커 v12</title>
 <script>
 // 캐시 강제 새로고침: 버전이 바뀌면 자동 리로드
-var APP_VER='v21';
+var APP_VER='v22';
 try{localStorage.clear()}catch(e){} // 기존 캐시 완전 제거
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -615,7 +615,7 @@ function renderDashboard(){
     if(i===0)ranks.push(1);
     else ranks.push(stats[i].rate===stats[i-1].rate?ranks[i-1]:i+1);
   }
-  h+='<div class="card"><div class="card-title"><span class="icon">&#x1f3c6;</span>멤버별 누계 달성률 <span style="font-size:11px;font-weight:500;color:var(--text-muted)">('+START_DAY+'일~'+today+'일 기준)</span></div>';
+  h+='<div class="card"><div class="card-title"><span class="icon">&#x1f3c6;</span>멤버별 누계 달성률 <span style="font-size:11px;font-weight:500;color:var(--text-muted)">('+START_DAY+'일~'+(today-1)+'일 기준, 오늘 제외)</span></div>';
   for(var i=0;i<stats.length;i++){
     var s=stats[i],r=ranks[i],mc=r===1?'rm-1':r===2?'rm-2':r===3?'rm-3':'rm-n';
     h+='<div class="rank-row"><div class="rank-medal '+mc+'">'+r+'</div>';
@@ -628,11 +628,11 @@ function renderDashboard(){
 }
 function sCard(label,value,cls){return '<div class="summary-card '+cls+'"><div class="label">'+label+'</div><div class="value">'+value+'</div><div class="bar"></div></div>'}
 function getStats(){
-  // 오늘까지 포함 (오늘 업로드도 즉시 반영)
+  // 어제까지만 카운트 (오늘은 진행중이라 제외)
   var today=getTodayDay();
-  var pastDays=today-START_DAY+1; // 시작일부터 오늘까지
+  var pastDays=today-START_DAY; // 시작일부터 어제까지
   if(pastDays<1)pastDays=1;
-  var s=[];for(var i=0;i<data.members.length;i++){var m=data.members[i],c=0;for(var d=START_DAY;d<=today;d++)if(isComplete(getRec(m,d),m,d))c++;s.push({name:m,completed:c,pastDays:pastDays,rate:Math.round(c/pastDays*100)})}return s;
+  var s=[];for(var i=0;i<data.members.length;i++){var m=data.members[i],c=0;for(var d=START_DAY;d<today;d++)if(isComplete(getRec(m,d),m,d))c++;s.push({name:m,completed:c,pastDays:pastDays,rate:Math.round(c/pastDays*100)})}return s;
 }
 
 function renderCalendar(){
