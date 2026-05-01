@@ -6,10 +6,10 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>5월 스레드 챌린지 트래커</title>
+<title>4월 스레드 챌린지 트래커 (보존판)</title>
 <script>
-// 캐시 무효화 - 매 접속마다 새 URL로 리로드 (혜경님 같은 캐시 문제 영구 해결)
-var APP_VER='may-v1';
+// 캐시 무효화 - 매 접속마다 강제 새로고침
+var APP_VER='apr-v22';
 try{localStorage.clear()}catch(e){}
 if(location.search.indexOf('v=')===-1){
   location.replace(location.pathname+'?v='+Date.now());
@@ -420,11 +420,11 @@ body {
     <div class="header-top" style="justify-content:space-between">
       <div style="display:flex;align-items:center;gap:14px">
         <div class="header-icon">&#x1f9f5;</div>
-        <h1>5월 스레드 챌린지</h1>
+        <h1>4월 스레드 챌린지 <span style="font-size:11px;background:rgba(255,255,255,0.2);padding:3px 10px;border-radius:10px;font-weight:500;letter-spacing:0">보존판</span></h1>
       </div>
-      <a href="april.html" style="font-size:12px;color:#fff;background:rgba(255,255,255,0.15);padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:600;backdrop-filter:blur(8px)">← 4월 보기</a>
+      <a href="/" style="font-size:12px;color:#fff;background:rgba(255,255,255,0.15);padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:600;backdrop-filter:blur(8px)">5월 챌린지 →</a>
     </div>
-    <p style="margin-left:58px">매일 인증글 3개 + 대표글 링크 1개</p>
+    <p style="margin-left:58px">4월 1일 ~ 30일 (마감)</p>
   </div>
 </div>
 
@@ -452,20 +452,16 @@ body {
 </div>
 
 <script>
-var YEAR=2026,MONTH=5,DAYS=31,START_DAY=1;
-var STORAGE_KEY='threads-challenge-2026-05';
-var IMG_KEY='threads-challenge-imgs-2026-05';
+var YEAR=2026,MONTH=4,DAYS=30,START_DAY=2;
+var STORAGE_KEY='threads-challenge-2026-04';
+var IMG_KEY='threads-challenge-imgs-2026-04';
 var DEFAULT_MEMBERS=['강국어','김성훈','김은전','최덕분','추세은','이광희','BELLA EDIT','silver rain','김혜경'];
 
 // ========== FIREBASE ==========
-if(typeof firebase==='undefined'){
-  document.body.innerHTML='<div style="padding:40px;text-align:center;font-family:sans-serif"><h2>⚠️ Firebase 연결 실패</h2><p>인터넷 연결을 확인하고 새로고침해주세요.</p><button onclick="location.reload(true)" style="padding:10px 20px;font-size:16px;margin-top:20px">새로고침</button></div>';
-  throw new Error('Firebase SDK 로드 실패');
-}
-try{firebase.initializeApp({databaseURL:'https://thread-challenge-default-rtdb.firebaseio.com'})}catch(e){console.error('Firebase init:',e)}
+firebase.initializeApp({databaseURL:'https://thread-challenge-default-rtdb.firebaseio.com'});
 var db=firebase.database();
-var FB_REC='challenge202605/records';
-var FB_IMG='challenge202605/images';
+var FB_REC='challenge2026/records';
+var FB_IMG='challenge2026/images';
 var MEMBER_THREADS={
   '강국어':'https://www.threads.net/@kang_moonhak',
   '김성훈':'https://www.threads.net/@for_p_lab',
@@ -544,8 +540,8 @@ function getKSTDay(){
   return -1;
 }
 function isTodayLocked(){
-  // 5월 챌린지 진행 중 — 모든 날짜 입력 가능 (운영자 재량으로 마감 시점 조정)
-  return false;
+  // 4월 보존판은 항상 읽기 전용
+  return true;
 }
 function getKSTDate(){
   var now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
@@ -623,7 +619,7 @@ function renderDashboard(){
     if(i===0)ranks.push(1);
     else ranks.push(stats[i].rate===stats[i-1].rate?ranks[i-1]:i+1);
   }
-  h+='<div class="card"><div class="card-title"><span class="icon">&#x1f3c6;</span>멤버별 누계 달성률 <span style="font-size:11px;font-weight:500;color:var(--text-muted)">('+START_DAY+'일~'+today+'일 기준)</span></div>';
+  h+='<div class="card"><div class="card-title"><span class="icon">&#x1f3c6;</span>멤버별 누계 달성률 <span style="font-size:11px;font-weight:500;color:var(--text-muted)">('+START_DAY+'일~'+(today-1)+'일 기준, 오늘 제외)</span></div>';
   for(var i=0;i<stats.length;i++){
     var s=stats[i],r=ranks[i],mc=r===1?'rm-1':r===2?'rm-2':r===3?'rm-3':'rm-n';
     h+='<div class="rank-row"><div class="rank-medal '+mc+'">'+r+'</div>';
@@ -636,11 +632,11 @@ function renderDashboard(){
 }
 function sCard(label,value,cls){return '<div class="summary-card '+cls+'"><div class="label">'+label+'</div><div class="value">'+value+'</div><div class="bar"></div></div>'}
 function getStats(){
-  // 시작일부터 오늘까지 카운트 (오늘 업로드도 즉시 반영)
+  // 어제까지만 카운트 (오늘은 진행중이라 제외)
   var today=getTodayDay();
-  var pastDays=today-START_DAY+1;
+  var pastDays=today-START_DAY; // 시작일부터 어제까지
   if(pastDays<1)pastDays=1;
-  var s=[];for(var i=0;i<data.members.length;i++){var m=data.members[i],c=0;for(var d=START_DAY;d<=today;d++)if(isComplete(getRec(m,d),m,d))c++;s.push({name:m,completed:c,pastDays:pastDays,rate:Math.round(c/pastDays*100)})}return s;
+  var s=[];for(var i=0;i<data.members.length;i++){var m=data.members[i],c=0;for(var d=START_DAY;d<today;d++)if(isComplete(getRec(m,d),m,d))c++;s.push({name:m,completed:c,pastDays:pastDays,rate:Math.round(c/pastDays*100)})}return s;
 }
 
 function renderCalendar(){
